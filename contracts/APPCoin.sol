@@ -24,6 +24,16 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         require(msg.sender == apiCoin, 'ApiCoin Required');
         _mint(from, amount,'','');
     }
+    // prevent transfer
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(from == address(0) || msg.sender == owner(), 'Not permitted');
+        super._beforeTokenTransfer(operator, from, to, amount);
+    }
     //
     function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyOwner public {
         for(uint256 i=0; i<indexArr.length; i++) {
