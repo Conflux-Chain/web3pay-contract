@@ -18,15 +18,25 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         require(msg.sender == appOwner, 'not app owner');
         _;
     }
+    // resources
+    event ResourceChanged(uint32 indexed index);
     struct WeightEntry {
         string name;
         uint weight;
     }
     uint32 public nextWeightIndex;
     mapping(uint32=>WeightEntry) public resourceWeights;
+    // frozen; value 1 means frozen by manager;
+    mapping(address=>uint256) public frozenMap;
+    event Frozen(address indexed addr);
+    uint256 public forceWithdrawAfterBlock;
+    //
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external {
         require(msg.sender == apiCoin, 'ApiCoin Required');
+        if (frozenMap[from] > 0) {
+            revert('Account is frozen');
+        }
         _mint(from, amount,'','');
     }
     // prevent transfer
@@ -36,10 +46,35 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         address to,
         uint256 amount
     ) internal override {
-        require(from == address(0) || msg.sender == owner(), 'Not permitted');
+        require(from == address(0) || to == address(0) || msg.sender == owner(), 'Not permitted');
         super._beforeTokenTransfer(operator, from, to, amount);
     }
-    //
+    // -------- owner/bill manager operation -----------
+    function freeze(address acc, bool f) public {
+        require(msg.sender == appOwner || msg.sender == owner(), 'Unauthorised');
+        if (f) {
+            frozenMap[acc] = 1;
+            emit Frozen(acc);
+        } else {
+            delete frozenMap[acc];
+        }
+    }
+    // -------- api consumer operation -----------
+    function withdrawRequest() public {
+        require(frozenMap[msg.sender] == 0, 'Account is frozen');
+        frozenMap[msg.sender] = block.number;
+        emit Frozen(msg.sender);
+    }
+    function forceWithdraw() public {
+        require(frozenMap[msg.sender] != 1, 'Frozen by admin');
+        require(frozenMap[msg.sender] > 0, 'Withdraw request first');
+        require(block.number - frozenMap[msg.sender] > forceWithdrawAfterBlock, 'Waiting time');
+        uint256 appCoinLeft = balanceOf(msg.sender);
+        burn(appCoinLeft, "force withdraw");
+        IERC777Upgradeable(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
+        delete frozenMap[msg.sender];
+    }
+    // -------- app owner operation -----------
     function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyAppOwner public {
         for(uint256 i=0; i<indexArr.length; i++) {
             setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
@@ -51,7 +86,12 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
             nextWeightIndex += 1;
         }
         resourceWeights[index] = WeightEntry(resourceId, weight);
+        emit ResourceChanged(index);
     }
+    function setForceWithdrawAfterBlock(uint256 diff) public onlyAppOwner {
+        forceWithdrawAfterBlock = diff;
+    }
+    // ------------ public -------------
     function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
         require(offset < nextWeightIndex, 'invalid offset');
         WeightEntry[] memory slice = new WeightEntry[](limit);
@@ -77,6 +117,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
 
         apiCoin = apiCoin_;
         appOwner = appOwner_;
+        forceWithdrawAfterBlock = 10_000;
     }
 
     function pause() public onlyOwner {
