@@ -20,7 +20,7 @@ function dumpEvent(receipt: ContractReceipt) {
 }
 describe("ApiCoin", async function () {
   const signerArr = await ethers.getSigners();
-  const [, signer2] = signerArr;
+  const [, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
@@ -101,8 +101,12 @@ describe("ApiCoin", async function () {
       .then((res) => res.wait());
     //
     const app2 = await app.connect(signer2);
+    const app3 = await app.connect(signer3);
     console.log(`app owner   ${await app.owner()}`);
     console.log(`app2 signer ${await app2.signer.getAddress()}`);
+    await expect(
+      app3.freeze(api.address, true).then((res) => res.wait())
+    ).to.be.revertedWith(`Unauthorised`);
 
     await expect(
       app2.transfer(api.address, parseEther("1")).then((res) => res.wait())
@@ -114,16 +118,57 @@ describe("ApiCoin", async function () {
         .then((res) => res.wait())
     ).to.be.revertedWith(`Not permitted`);
 
-    await expect(
-      app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
-    ).to.be.revertedWith(`Not permitted`);
+    // await expect(
+    //   app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
+    // ).to.be.revertedWith(`Not permitted`);
 
-    await expect(app2.setResourceWeight(0, "p0", 10)).to.be.revertedWith(`not app owner`);
-    app2
-      .transfer(api.address, parseEther("2"))
-      .then((res) => res.wait())
-      .catch((err) => {
-        console.log(`transfer fail:`, err);
-      });
+    await expect(app2.setResourceWeight(0, "p0", 10)).to.be.revertedWith(
+      `not app owner`
+    );
+    // app2
+    //   .transfer(api.address, parseEther("2"))
+    //   .then((res) => res.wait())
+    //   .catch((err) => {
+    //     console.log(`transfer fail:`, err);
+    //   });
+  });
+  it("withdraw", async function () {
+    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const app = (await deployProxy("APPCoin", [
+      api.address,
+      acc2, // set acc2 as app owner
+      "APP 1",
+      "APP1",
+    ])) as APPCoin;
+    await api
+      .depositToApp(app.address, { value: parseEther("1") })
+      .then((res) => res.wait());
+    const app2 = await app.connect(signer2);
+    // freeze acc1 by admin
+    await app2.freeze(acc1, true).then((res) => res.wait());
+    await expect(
+      app.forceWithdraw().then((res) => res.wait())
+    ).to.be.revertedWith(`Frozen by admin`);
+    await expect(
+      app.withdrawRequest().then((res) => res.wait())
+    ).to.be.revertedWith(`Account is frozen`);
+    // unfreeze
+    await app2.freeze(acc1, false).then((res) => res.wait());
+    await expect(
+      app.forceWithdraw().then((res) => res.wait())
+    ).to.be.revertedWith(`Withdraw request first`);
+    expect(await app.withdrawRequest().then((res) => res.wait()))
+      .to.be.emit(app, app.interface.events["Frozen(address)"].name)
+      .withArgs(acc1);
+    await expect(
+      app.forceWithdraw().then((res) => res.wait())
+    ).to.be.revertedWith(`Waiting time`);
+
+    // should transfer api coin from App to acc1
+    await app2.setForceWithdrawAfterBlock(0).then((res) => res.wait());
+    expect(await app.forceWithdraw().then((res) => res.wait()))
+      .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
+      .withArgs(app.address, acc1, parseEther("1"));
+    expect(await app.balanceOf(acc1)).eq(0);
   });
 });
