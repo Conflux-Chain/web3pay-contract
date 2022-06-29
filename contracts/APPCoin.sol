@@ -13,6 +13,11 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC777Recipient {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
+    address public appOwner;
+    modifier onlyAppOwner() {
+        require(msg.sender == appOwner, 'not app owner');
+        _;
+    }
     struct WeightEntry {
         string name;
         uint weight;
@@ -42,7 +47,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
             setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
         }
     }
-    function setResourceWeight(uint32 index, string calldata resourceId, uint weight) onlyOwner public {
+    function setResourceWeight(uint32 index, string calldata resourceId, uint weight) onlyAppOwner public {
         require(index <= nextWeightIndex, 'invalid index');
         if (index == nextWeightIndex) {
             nextWeightIndex += 1;
@@ -67,7 +72,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _disableInitializers();
     }
 
-    function initialize(address apiCoin_, string memory name_, string memory symbol_) initializer public {
+    function initialize(address apiCoin_, address appOwner_, string memory name_, string memory symbol_) initializer public {
         address[] memory defaultOperators = new address[](0);
         __ERC777_init(name_, symbol_, defaultOperators);
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
@@ -76,6 +81,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         __UUPSUpgradeable_init();
 
         apiCoin = apiCoin_;
+        appOwner = appOwner_;
     }
 
     function pause() public onlyOwner {
