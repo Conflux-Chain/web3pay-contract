@@ -18,11 +18,15 @@ function dumpEvent(receipt: ContractReceipt) {
   );
   return receipt;
 }
-describe("ApiCoin", function () {
+describe("ApiCoin", async function () {
+  const signerArr = await ethers.getSigners();
+  const [, signer2] = signerArr;
+  const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
     const app = (await deployProxy("APPCoin", [
       api.address,
+      acc1,
       "APP 1",
       "APP1",
     ])) as APPCoin;
@@ -48,6 +52,7 @@ describe("ApiCoin", function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
     const app = (await deployProxy("APPCoin", [
       api.address,
+      acc1,
       "APP 1",
       "APP1",
     ])) as APPCoin;
@@ -91,6 +96,7 @@ describe("ApiCoin", function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
     const app = (await deployProxy("APPCoin", [
       api.address,
+      acc1,
       "APP 1",
       "APP1",
     ])) as APPCoin;
@@ -98,8 +104,7 @@ describe("ApiCoin", function () {
       .depositToApp(app.address, { value: parseEther("1") })
       .then((res) => res.wait());
     //
-    const [, acc2] = await ethers.getSigners();
-    const app2 = await app.connect(acc2);
+    const app2 = await app.connect(signer2);
     console.log(`app owner   ${await app.owner()}`);
     console.log(`app2 signer ${await app2.signer.getAddress()}`);
 
@@ -117,6 +122,7 @@ describe("ApiCoin", function () {
       app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
     ).to.be.revertedWith(`Not permitted`);
 
+    await expect(app2.setResourceWeight(0, "p0", 10)).to.be.revertedWith(`not app owner`);
     app2
       .transfer(api.address, parseEther("2"))
       .then((res) => res.wait())
