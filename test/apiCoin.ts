@@ -68,9 +68,9 @@ describe("ApiCoin", function () {
     expect(await app.nextWeightIndex()).to.be.eq(index + 1);
 
     index = 3;
-    expect(app.setResourceWeight(index, "pathN", 3)).to.be.revertedWith(
-      `invalid index`
-    );
+    await expect(
+      app.setResourceWeight(index, "pathN", 3).then((res) => res.wait())
+    ).to.be.revertedWith(`invalid index`);
     // batch
     await app
       .setResourceWeightBatch([0, 1, 2], ["p0", "p1", "p2"], [10, 11, 12])
@@ -82,5 +82,42 @@ describe("ApiCoin", function () {
     const [[path, w]] = list;
     expect(path).eq("p0");
     expect(w).eq(10);
+  });
+  it("check permission", async function () {
+    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const app = (await deployProxy("APPCoin", [
+      api.address,
+      "APP 1",
+      "APP1",
+    ])) as APPCoin;
+    await api
+      .depositToApp(app.address, { value: parseEther("1") })
+      .then((res) => res.wait());
+    //
+    const [, acc2] = await ethers.getSigners();
+    const app2 = await app.connect(acc2);
+    console.log(`app owner   ${await app.owner()}`);
+    console.log(`app2 signer ${await app2.signer.getAddress()}`);
+
+    await expect(
+      app2.transfer(api.address, parseEther("1")).then((res) => res.wait())
+    ).to.be.revertedWith(`Not permitted`);
+
+    await expect(
+      app2
+        .send(api.address, parseEther("1"), Buffer.from(""))
+        .then((res) => res.wait())
+    ).to.be.revertedWith(`Not permitted`);
+
+    await expect(
+      app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
+    ).to.be.revertedWith(`Not permitted`);
+
+    app2
+      .transfer(api.address, parseEther("2"))
+      .then((res) => res.wait())
+      .catch((err) => {
+        console.log(`transfer fail:`, err);
+      });
   });
 });

@@ -14,7 +14,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
     struct WeightEntry {
-        string resourceId;
+        string name;
         uint weight;
     }
     uint32 public nextWeightIndex;
@@ -23,6 +23,16 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         override external {
         require(msg.sender == apiCoin, 'ApiCoin Required');
         _mint(from, amount,'','');
+    }
+    // prevent transfer
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(from == address(0) || msg.sender == owner(), 'Not permitted');
+        super._beforeTokenTransfer(operator, from, to, amount);
     }
 
     function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyOwner public {
