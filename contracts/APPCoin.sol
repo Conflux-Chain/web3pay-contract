@@ -25,11 +25,11 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _mint(from, amount,'','');
     }
     //
-//    function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyOwner public {
-//        for(uint32 i=0; i<indexArr.length; i++) {
-//            setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
-//        }
-//    }
+    function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyOwner public {
+        for(uint256 i=0; i<indexArr.length; i++) {
+            setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
+        }
+    }
     function setResourceWeight(uint32 index, string calldata resourceId, uint weight) onlyOwner public {
         require(index <= nextWeightIndex, 'invalid index');
         if (index == nextWeightIndex) {
@@ -40,7 +40,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
         require(offset < nextWeightIndex, 'invalid offset');
         WeightEntry[] memory slice = new WeightEntry[](limit);
-        for(uint32 i=0; i<limit;i++) {
+        for(uint256 i=0; i<limit;i++) {
             slice[i] = resourceWeights[offset];
             offset ++;
         }

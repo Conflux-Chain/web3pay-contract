@@ -75,5 +75,10 @@ describe("ApiCoin", function () {
     expect(app.setResourceWeight(index, "pathN", 3)).to.be.revertedWith(
       `invalid index`
     );
+    // batch
+    await app
+      .setResourceWeightBatch([0, 1, 2], ["p0", "p1", "p2"], [10, 11, 12])
+      .then((res) => res.wait());
+    expect(await app.nextWeightIndex()).to.be.eq(3);
   });
 });
