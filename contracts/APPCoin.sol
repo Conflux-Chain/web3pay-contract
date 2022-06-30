@@ -30,6 +30,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     mapping(address=>uint256) public frozenMap;
     event Frozen(address indexed addr);
     uint256 public forceWithdrawAfterBlock;
+    event Withdraw(address account, uint256 amount);
     //
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external {
@@ -59,7 +60,21 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
             delete frozenMap[acc];
         }
     }
+    function charge(address account, uint256 amount, bytes memory data) public onlyOwner {
+        _burn(account, amount, "", data);
+        if (frozenMap[account] > 1) {
+            // refund
+            uint256 appCoinLeft = balanceOf(account);
+            _burn(account, appCoinLeft, "", "refund");
+            IERC777Upgradeable(apiCoin).send(account, appCoinLeft, "refund");
+            delete frozenMap[account];
+            emit Withdraw(account, appCoinLeft);
+        }
+    }
     // -------- api consumer operation -----------
+    function burn(uint256 , bytes memory ) public override {
+        revert('Not permitted');
+    }
     function withdrawRequest() public {
         require(frozenMap[msg.sender] == 0, 'Account is frozen');
         frozenMap[msg.sender] = block.number;
@@ -70,9 +85,10 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
         require(block.number - frozenMap[msg.sender] > forceWithdrawAfterBlock, 'Waiting time');
         uint256 appCoinLeft = balanceOf(msg.sender);
-        burn(appCoinLeft, "force withdraw");
+        _burn(msg.sender, appCoinLeft, "force withdraw", "");
         IERC777Upgradeable(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
         delete frozenMap[msg.sender];
+        emit Withdraw(msg.sender, appCoinLeft);
     }
     // -------- app owner operation -----------
     function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyAppOwner public {
