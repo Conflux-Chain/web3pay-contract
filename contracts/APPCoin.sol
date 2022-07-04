@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC777/ERC777Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 
-contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC777Recipient {
+contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
     address public appOwner;
@@ -33,7 +30,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     event Withdraw(address account, uint256 amount);
 
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
-        override external {
+        override external whenNotPaused {
         require(msg.sender == apiCoin, 'ApiCoin Required');
         if (frozenMap[from] > 0) {
             revert('Account is frozen');
@@ -60,33 +57,36 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
             delete frozenMap[acc];
         }
     }
-    function charge(address account, uint256 amount, bytes memory data) public onlyOwner {
+    function charge(address account, uint256 amount, bytes memory data) public onlyAppOwner whenNotPaused{
         _burn(account, amount, "", data);
         if (frozenMap[account] > 1) {
             // refund
             uint256 appCoinLeft = balanceOf(account);
             _burn(account, appCoinLeft, "", "refund");
-            IERC777Upgradeable(apiCoin).send(account, appCoinLeft, "refund");
+            IERC777(apiCoin).send(account, appCoinLeft, "refund");
             delete frozenMap[account];
             emit Withdraw(account, appCoinLeft);
         }
     }
     // -------- api consumer operation -----------
-    function burn(uint256 , bytes memory ) public override {
-        revert('Not permitted');
+    function burn(uint256 amount, bytes memory ) public override whenNotPaused{
+        if(amount >= 0){
+            revert('Not permitted');
+        }
+        super.burn(0, ""); // suppress warning
     }
-    function withdrawRequest() public {
+    function withdrawRequest() public whenNotPaused {
         require(frozenMap[msg.sender] == 0, 'Account is frozen');
         frozenMap[msg.sender] = block.number;
         emit Frozen(msg.sender);
     }
-    function forceWithdraw() public {
+    function forceWithdraw() public whenNotPaused {
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
         require(block.number - frozenMap[msg.sender] > forceWithdrawAfterBlock, 'Waiting time');
         uint256 appCoinLeft = balanceOf(msg.sender);
         _burn(msg.sender, appCoinLeft, "force withdraw", "");
-        IERC777Upgradeable(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
+        IERC777(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
         delete frozenMap[msg.sender];
         emit Withdraw(msg.sender, appCoinLeft);
     }
@@ -106,7 +106,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         resourceWeights[index] = WeightEntry(resourceId, weight);
         emit ResourceChanged(index);
     }
-    function setForceWithdrawAfterBlock(uint256 diff) public onlyAppOwner {
+    function setForceWithdrawAfterBlock(uint256 diff) public onlyAppOwner whenNotPaused{
         forceWithdrawAfterBlock = diff;
     }
     // ------------ public -------------
@@ -123,19 +123,19 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         return slice;
     }
     // -------------------------open zeppelin----------------------------
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
+    constructor()
+        ERC777("", "", new address[](0)) {
     }
-
-    function initialize(address apiCoin_, address appOwner_, string memory name_, string memory symbol_) initializer public {
-        address[] memory defaultOperators = new address[](0);
-        __ERC777_init(name_, symbol_, defaultOperators);
+    function initOwner(address owner_) public {
+        require(owner() == address(0), 'Owner exists');
+        _transferOwnership(owner_);
+    }
+    function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_) public onlyOwner{
+//        address[] memory defaultOperators = new address[](0);
+//        require(owner() == address(0), 'Already initialized!');
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
-        __Pausable_init();
-        __Ownable_init();
-        __UUPSUpgradeable_init();
-
+        _name = name_;
+        _symbol = symbol_;
         apiCoin = apiCoin_;
         appOwner = appOwner_;
         forceWithdrawAfterBlock = 10_000;
@@ -148,10 +148,4 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     function unpause() public onlyOwner {
         _unpause();
     }
-
-    function _authorizeUpgrade(address newImplementation)
-    internal
-    onlyOwner
-    override
-    {}
 }

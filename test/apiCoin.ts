@@ -1,11 +1,24 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { APICoin, APPCoin } from "../typechain";
+import {APICoin, APPCoin, Controller} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
+async function deploy(name:string,args: any[]) {
+  const template = await ethers.getContractFactory(name);
+  const deploy = await template.deploy(args)
+  const instance = await deploy.deployed();
+  console.log(`deploy ${name} at ${instance.address}, tx ${deploy.deployTransaction.hash}`)
+  return instance;
+}
+async function deployApp(name: string, args: any[]) {
+  const app = await deploy(name, []).then(res=>res as APPCoin)
+  const [apiCoin,appOwner,name_,symbol] = args;
+  await app.init(apiCoin,appOwner,name_,symbol)
+  return app;
+}
 async function deployProxy(name: string, args: any[]) {
   const template = await ethers.getContractFactory(name);
   const proxy = await upgrades.deployProxy(template, args);
@@ -22,7 +35,7 @@ function dumpEvent(receipt: ContractReceipt) {
 async function deployAndDeposit(signer2:SignerWithAddress) {
   const acc2 = await signer2.getAddress();
   const api = (await deployProxy("APICoin", [])) as APICoin;
-  const app = (await deployProxy("APPCoin", [
+  const app = (await deployApp("APPCoin", [
     api.address,
     acc2, // set acc2 as app owner
     "APP 1",
@@ -34,13 +47,24 @@ async function deployAndDeposit(signer2:SignerWithAddress) {
   const app2 = await app.connect(signer2);
   return {api, app, app2}
 }
+describe("Controller", async function () {
+  it("createApp" , async function (){
+    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    console.log(``)
+    const tx = await controller.createApp("CoinA", "CA").then(res=>res.wait())
+    expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
+    //
+    const app = await controller.appUpgradeableBeacon()
+    const api = await controller.apiProxy()
+  })
+})
 describe("ApiCoin", async function () {
   const signerArr = await ethers.getSigners();
-  const [, signer2, signer3] = signerArr;
+  const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
-    const app = (await deployProxy("APPCoin", [
+    const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
       "APP 1",
@@ -66,7 +90,7 @@ describe("ApiCoin", async function () {
   });
   it("set resource weights", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
-    const app = (await deployProxy("APPCoin", [
+    const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
       "APP 1",
@@ -106,7 +130,7 @@ describe("ApiCoin", async function () {
   });
   it("check permission", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
-    const app = (await deployProxy("APPCoin", [
+    const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
       "APP 1",
@@ -118,12 +142,14 @@ describe("ApiCoin", async function () {
     //
     const app2 = await app.connect(signer2);
     const app3 = await app.connect(signer3);
-    console.log(`app owner   ${await app.owner()}`);
-    console.log(`app2 signer ${await app2.signer.getAddress()}`);
+    console.log(`app contract owner   ${await app.owner()}`);
+    console.log(`app business owner   ${await app.appOwner()}`);
+    console.log(`app  signer          ${await app.signer.getAddress()}`);
+    console.log(`app2 signer          ${await app2.signer.getAddress()}`);
     await expect(
       app3.freeze(api.address, true).then((res) => res.wait())
     ).to.be.revertedWith(`Unauthorised`);
-
+    //
     await expect(
       app2.transfer(api.address, parseEther("1")).then((res) => res.wait())
     ).to.be.revertedWith(`Not permitted`);
@@ -179,7 +205,7 @@ describe("ApiCoin", async function () {
 
   });
   it("charge and auto refund", async () => {
-    const {api, app, app2} = await deployAndDeposit(signer2);
+    const {api, app, app2} = await deployAndDeposit(signer1);
     // charge without refund
     await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
         .to.be.emit(app, app.interface.events["Transfer(address,address,uint256)"].name)
