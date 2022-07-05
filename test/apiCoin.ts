@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import {APICoin, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
+import {APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 const {
@@ -84,7 +84,23 @@ describe("Controller", async function () {
     expect(arr.length).eq(2)
     expect(total).eq(2)
   })
-  it("upgrade app", async function (){
+  it("upgrade api contract, UUPS", async function (){
+    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    await controller.createApp("app 1", "a1").then(tx=>tx.wait());
+    const api1addr = await controller.apiProxy();
+    const app1 = await controller.appMapping(0)
+    const originApp1 = await attach("APICoin", api1addr) as APICoin
+    await originApp1.depositToApp(app1, {value: parseEther("1")}).then(tx=>tx.wait())
+    //
+    const apiv2 = await deploy("ApiV2",[]) as ApiV2;
+    await expect(originApp1.upgradeTo(apiv2.address)).emit(originApp1, originApp1.interface.events["Upgraded(address)"].name)
+        .withArgs(apiv2.address);
+    const upgradedV2 = await apiv2.attach(api1addr)
+    expect(await upgradedV2.version()).eq("ApiV2")
+    expect(await originApp1.balanceOf(app1)).eq(parseEther("1"))
+  })
+
+  it("upgrade app, beacon", async function (){
     const controller = await deploy("Controller", []).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
 
