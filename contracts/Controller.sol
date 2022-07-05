@@ -17,7 +17,7 @@ contract Controller is Ownable {
     APICoin public apiProxy;
     event APP_CREATED(address indexed addr, address indexed appOwner);
     uint256 public nextId;
-    mapping(uint256=>address) appMapping;
+    mapping(uint256=>address) public appMapping;
     constructor (){
         APICoin apiCoin = new APICoin();
         bytes memory data = abi.encodeWithSelector(APICoin.initialize.selector);
