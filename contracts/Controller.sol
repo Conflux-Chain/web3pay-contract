@@ -16,6 +16,8 @@ contract Controller is Ownable {
     UpgradeableBeacon public appUpgradeableBeacon;
     APICoin public apiProxy;
     event APP_CREATED(address indexed addr, address indexed appOwner);
+    uint256 public nextId;
+    mapping(uint256=>address) appMapping;
     constructor (){
         APICoin apiCoin = new APICoin();
         bytes memory data = abi.encodeWithSelector(APICoin.initialize.selector);
@@ -25,7 +27,6 @@ contract Controller is Ownable {
         APPCoin appImpl = new APPCoin();
         appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
         appUpgradeableBeacon.transferOwnership(msg.sender);
-
     }
     function createApp(string memory name_, string memory symbol_) public {
         APPCoin app = APPCoin((address(new BeaconProxy(address(appUpgradeableBeacon), ""))));
@@ -33,7 +34,21 @@ contract Controller is Ownable {
         console.log("owner of '%s' is '%s'", address(app), address(app.owner()));
         app.init(address(apiProxy), msg.sender, name_, symbol_);
         app.transferOwnership(owner());
+        appMapping[nextId] = address(app);
+        nextId += 1;
         emit APP_CREATED(address(app), msg.sender);
+    }
+    function listApp(uint offset, uint limit) public view returns (address[] memory, uint total){
+        require(offset < nextId, 'invalid offset');
+        if (offset + limit >= nextId) {
+            limit = nextId - offset;
+        }
+        address[] memory arr = new address[](limit);
+        for(uint i=0; i<limit; i++) {
+            arr[i] = appMapping[offset];
+            offset += 1;
+        }
+        return (arr, nextId);
     }
 }
 // reference to: https://forum.openzeppelin.com/t/how-to-deploy-new-instances-using-beacon-proxy-from-a-factory-when-using-openzeppelin-hardhat-upgrades/27801/5

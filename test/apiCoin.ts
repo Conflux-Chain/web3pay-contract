@@ -6,6 +6,10 @@ import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
+async function attach(name:string, to:string) {
+  const template = await ethers.getContractFactory(name);
+  return template.attach(to)
+}
 async function deploy(name:string,args: any[]) {
   const template = await ethers.getContractFactory(name);
   const deploy = await template.deploy(args)
@@ -48,14 +52,29 @@ async function deployAndDeposit(signer2:SignerWithAddress) {
   return {api, app, app2}
 }
 describe("Controller", async function () {
+  const signerArr = await ethers.getSigners();
+  const [signer1, signer2, signer3] = signerArr;
+  const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("createApp" , async function (){
     const controller = await deploy("Controller", []).then(res=>res as Controller);
     console.log(``)
     const tx = await controller.createApp("CoinA", "CA").then(res=>res.wait())
     expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
+    // @ts-ignore
+    const createdAppAddr = tx.events?.filter(e=>e.event === controller.interface.events["APP_CREATED(address,address)"].name)
+        [0].args[0]
     //
-    const app = await controller.appUpgradeableBeacon()
-    const api = await controller.apiProxy()
+    const app = await attach("APPCoin", createdAppAddr).then(res=>res as APPCoin)
+    const api = await controller.apiProxy().then(res=>attach("APICoin", res)).then(res=>res as APICoin)
+    console.log(`app business owner`, await app.appOwner())
+    console.log(`app contract owner`, await app.owner())
+
+    console.log(`api contract owner`, await api.owner())
+    expect(await app.appOwner()).eq(acc1)
+    expect(await app.owner()).eq(acc1)
+    expect(await api.owner()).eq(acc1)
+    expect(await app.name()).eq("CoinA")
+    expect(await app.symbol()).eq("CA")
   })
 })
 describe("ApiCoin", async function () {
