@@ -1,0 +1,11 @@
+{
+  "name": "web3pay-contract",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Conflux-Chain/web3pay-contract.git",
+  "author": "Kang <kangjianhu@conflux-chain.org>",
+  "license": "MIT",
+  "dependencies": {
+    "hardhat": "^2.9.9"
+  }
+}
