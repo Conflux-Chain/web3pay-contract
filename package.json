@@ -7,6 +7,8 @@
   "license": "MIT",
   "scripts": {
     "compile": "hardhat compile",
+    "docgen-sol-doesn't work": "hardhat docgen",
+    "doc": "solidity-docgen --solc-module solc-0-8",
     "test-api-coin": "hardhat test ./test/apiCoin.ts"
   },
   "dependencies": {
@@ -14,7 +16,8 @@
     "@openzeppelin/contracts-upgradeable": "~4.6.0",
     "@openzeppelin/hardhat-upgrades": "~1.19.0",
     "hardhat": "^2.9.9",
-    "hardhat-erc1820": "^0.1.0"
+    "hardhat-erc1820": "^0.1.0",
+    "solidity-docgen": "~0.5.17"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
@@ -42,6 +45,7 @@
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
     "solhint": "^3.3.6",
+    "solc-0-8": "npm:solc@^0.8.4",
     "solidity-coverage": "^0.7.16",
     "ts-node": "^10.1.0",
     "typechain": "^5.1.2",

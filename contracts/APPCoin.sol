@@ -7,6 +7,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 
+/** @dev Settlement contract between API consumer and API supplier.
+ *
+ * For Api supplier:
+ * - setResourceWeightBatch
+ * - setResourceWeight
+ * - charge
+ * - freeze
+ * - takeProfit
+ *
+ * For api consumer:
+ * - withdrawRequest
+ * - forceWithdraw
+ * - freeze
+ */
 contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
@@ -28,6 +42,8 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
     event Frozen(address indexed addr);
     uint256 public forceWithdrawAfterBlock;
     event Withdraw(address account, uint256 amount);
+    uint256 public totalCharged;
+    uint256 public totalTakenProfit;
 
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external whenNotPaused {
@@ -48,6 +64,9 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
         super._beforeTokenTransfer(operator, from, to, amount);
     }
     // -------- owner/bill manager operation -----------
+    /**
+    * @dev Freeze/Unfreeze an account.
+    */
     function freeze(address acc, bool f) public {
         require(msg.sender == appOwner || msg.sender == owner(), 'Unauthorised');
         if (f) {
@@ -57,8 +76,15 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
             delete frozenMap[acc];
         }
     }
+    function takeProfit(address to, uint256 amount) public onlyAppOwner whenNotPaused {
+        require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
+        totalTakenProfit += amount;
+        IERC777(apiCoin).send(to, amount, "takeProfit");
+    }
+    /** @dev Charge fee*/
     function charge(address account, uint256 amount, bytes memory data) public onlyAppOwner whenNotPaused{
         _burn(account, amount, "", data);
+        totalCharged += amount;
         if (frozenMap[account] > 1) {
             // refund
             uint256 appCoinLeft = balanceOf(account);
@@ -69,17 +95,23 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
         }
     }
     // -------- api consumer operation -----------
+    /**
+    * @dev Not permitted.
+    * @notice Prevent anyone from transferring app coin.
+    */
     function burn(uint256 amount, bytes memory ) public override whenNotPaused{
         if(amount >= 0){
             revert('Not permitted');
         }
         super.burn(0, ""); // suppress warning
     }
+    /** @dev Used by an API consumer to send a withdraw request, API key related to the caller will be frozen. */
     function withdrawRequest() public whenNotPaused {
         require(frozenMap[msg.sender] == 0, 'Account is frozen');
         frozenMap[msg.sender] = block.number;
         emit Frozen(msg.sender);
     }
+    /** @dev After some time, user can force withdraw his funds anyway. */
     function forceWithdraw() public whenNotPaused {
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
