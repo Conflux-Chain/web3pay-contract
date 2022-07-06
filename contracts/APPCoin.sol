@@ -13,13 +13,37 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC777Recipient {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
+    struct WeightEntry {
+        string resourceId;
+        uint weight;
+    }
+    uint32 public nextWeightIndex;
+    mapping(uint32=>WeightEntry) public resourceWeights;
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external {
         require(msg.sender == apiCoin, 'ApiCoin Required');
         _mint(from, amount,'','');
     }
-    //
-    // -----------------------------------------------------
+    function setResourceWeight(uint32 index, string calldata resourceId, uint weight) onlyOwner public {
+        require(index <= nextWeightIndex, 'invalid index');
+        if (index == nextWeightIndex) {
+            nextWeightIndex += 1;
+        }
+        resourceWeights[index] = WeightEntry(resourceId, weight);
+    }
+    function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
+        require(offset < nextWeightIndex, 'invalid offset');
+        if (offset + limit >= nextWeightIndex) {
+            limit = nextWeightIndex - offset;
+        }
+        WeightEntry[] memory slice = new WeightEntry[](limit);
+        for(uint32 i=0; i<limit;i++) {
+            slice[i] = resourceWeights[offset];
+            offset ++;
+        }
+        return slice;
+    }
+    // -------------------------open zeppelin----------------------------
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

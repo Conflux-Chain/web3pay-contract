@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { APICoin, APPCoin } from "../typechain";
+import { ContractReceipt } from "ethers";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
@@ -11,7 +12,12 @@ async function deployProxy(name: string, args: any[]) {
   console.log(`deploy proxy ${name}, got ${contract.address}`);
   return contract;
 }
-
+function dumpEvent(receipt: ContractReceipt) {
+  console.log(
+    receipt.events?.map((e) => `${e.address} ${e.event}, ${e.args}`).join("\n")
+  );
+  return receipt;
+}
 describe("ApiCoin", function () {
   it("Should deposit to app", async function () {
     const api = (await deployProxy("APICoin", [])) as APICoin;
@@ -29,14 +35,7 @@ describe("ApiCoin", function () {
       await api
         .depositToApp(app.address, { value: spend })
         .then((res) => res.wait())
-        .then((receipt) => {
-          console.log(
-            receipt.events
-              ?.map((e) => `${e.address} ${e.event}, ${e.args}`)
-              .join("\n")
-          );
-          return receipt;
-        })
+        .then(dumpEvent)
     )
       .emit(app, app.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(ethers.constants.AddressZero, account, spend);
@@ -44,5 +43,33 @@ describe("ApiCoin", function () {
       console.log(`balance of app, user ${account}`, formatEther(res));
     });
     //
+  });
+  it("set resource weights", async function () {
+    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const app = (await deployProxy("APPCoin", [
+      api.address,
+      "APP 1",
+      "APP1",
+    ])) as APPCoin;
+    let index = 0;
+    await app
+      .setResourceWeight(index, "path1", 1)
+      .then((res) => res.wait())
+      .then(dumpEvent)
+    expect(
+      await app.resourceWeights(index).then((res) => {
+        // eslint-disable-next-line no-unused-vars
+        const [path, weight] = res;
+        return weight;
+      })
+    ).to.be.eq(1);
+
+    //
+    expect(await app.nextWeightIndex()).to.be.eq(index + 1);
+
+    index = 3;
+    expect(app.setResourceWeight(index, "pathN", 3)).to.be.revertedWith(
+      `invalid index`
+    );
   });
 });
