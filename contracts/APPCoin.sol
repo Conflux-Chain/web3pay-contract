@@ -14,7 +14,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
     struct WeightEntry {
-        string name;
+        string resourceId;
         uint weight;
     }
     uint32 public nextWeightIndex;
@@ -33,6 +33,9 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     }
     function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
         require(offset < nextWeightIndex, 'invalid offset');
+        if (offset + limit >= nextId) {
+            limit = nextId - offset;
+        }
         WeightEntry[] memory slice = new WeightEntry[](limit);
         for(uint32 i=0; i<limit;i++) {
             slice[i] = resourceWeights[offset];
