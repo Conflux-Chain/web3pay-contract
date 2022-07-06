@@ -33,8 +33,8 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     }
     function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
         require(offset < nextWeightIndex, 'invalid offset');
-        if (offset + limit >= nextId) {
-            limit = nextId - offset;
+        if (offset + limit >= nextWeightIndex) {
+            limit = nextWeightIndex - offset;
         }
         WeightEntry[] memory slice = new WeightEntry[](limit);
         for(uint32 i=0; i<limit;i++) {
