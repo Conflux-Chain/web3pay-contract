@@ -56,12 +56,8 @@ describe("ApiCoin", function () {
       .setResourceWeight(index, "path1", 1)
       .then((res) => res.wait())
       .then(dumpEvent)
-      .then((r) => {
-        // console.log(JSON.stringify(r));
-      });
     expect(
       await app.resourceWeights(index).then((res) => {
-        // console.log(`weight info`, res);
         // eslint-disable-next-line no-unused-vars
         const [path, weight] = res;
         return weight;
