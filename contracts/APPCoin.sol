@@ -19,7 +19,7 @@ contract APPCoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _;
     }
     struct WeightEntry {
-        string name;
+        string resourceId;
         uint weight;
     }
     uint32 public nextWeightIndex;
