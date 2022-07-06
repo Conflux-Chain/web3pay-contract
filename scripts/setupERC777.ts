@@ -1,7 +1,7 @@
 /**
  * OpenZeppelin ERC777 has `private` name and symbol fields, which doesn't match the requirement when
- * we want setup them after construction of then contract.
- * Use this tool to modify the modifier in the source file under node_modules/@openzeppelin/contracts
+ * we want to setup them after constructing the contract.
+ * Use this tool to change the modifier in the source file under node_modules/@openzeppelin/contracts.
  */
 import * as fs from "fs";
 
