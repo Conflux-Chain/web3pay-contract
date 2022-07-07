@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import {APICoin, APPCoin, Controller} from "../typechain";
+import {APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 const {
@@ -75,6 +75,52 @@ describe("Controller", async function () {
     expect(await api.owner()).eq(acc1)
     expect(await app.name()).eq("CoinA")
     expect(await app.symbol()).eq("CA")
+  })
+  it("list created app", async function (){
+    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    await controller.createApp("app 1", "a1").then(tx=>tx.wait());
+    await controller.createApp("app 2", "a2").then(tx=>tx.wait());
+    const [arr, total] = await controller.listApp(0, 10);
+    expect(arr.length).eq(2)
+    expect(total).eq(2)
+  })
+  it("upgrade api contract, UUPS", async function (){
+    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    await controller.createApp("app 1", "a1").then(tx=>tx.wait());
+    const api1addr = await controller.apiProxy();
+    const app1 = await controller.appMapping(0)
+    const originApp1 = await attach("APICoin", api1addr) as APICoin
+    await originApp1.depositToApp(app1, {value: parseEther("1")}).then(tx=>tx.wait())
+    //
+    const apiv2 = await deploy("ApiV2",[]) as ApiV2;
+    await expect(originApp1.upgradeTo(apiv2.address)).emit(originApp1, originApp1.interface.events["Upgraded(address)"].name)
+        .withArgs(apiv2.address);
+    const upgradedV2 = await apiv2.attach(api1addr)
+    expect(await upgradedV2.version()).eq("ApiV2")
+    expect(await originApp1.balanceOf(app1)).eq(parseEther("1"))
+  })
+
+  it("upgrade app, beacon", async function (){
+    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    await controller.createApp("app 1", "a1").then(tx=>tx.wait());
+
+    const app1addr = await controller.appMapping(0);
+    const originApp1 = await attach("APPCoin", app1addr) as APPCoin
+    await originApp1.setResourceWeight(0, "path0", 10).then(tx=>tx.wait())
+
+    const appUpgradeableBeacon = await controller.appUpgradeableBeacon().then(addr=>attach("UpgradeableBeacon", addr))
+        .then(c=>c as UpgradeableBeacon);
+    // check owner
+    expect(await appUpgradeableBeacon.owner()).eq(acc1);
+
+    const v2 = await deploy("AppV2", []).then(res=>res as AppV2);
+    await expect(appUpgradeableBeacon.upgradeTo(v2.address))
+        .emit(appUpgradeableBeacon, appUpgradeableBeacon.interface.events["Upgraded(address)"].name)
+        .withArgs(v2.address)
+    // call new method
+    const appV2 = await v2.attach(app1addr)
+    expect(await appV2.version()).eq("App v2");
+    expect(await originApp1.resourceWeights(0).then(info=>info.weight)).eq(10)
   })
 })
 describe("ApiCoin", async function () {
