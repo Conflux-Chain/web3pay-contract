@@ -126,13 +126,14 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
     constructor()
         ERC777("", "", new address[](0)) {
     }
+    /**
+     *  Called immediately after constructing through Controller contract.
+     */
     function initOwner(address owner_) public {
         require(owner() == address(0), 'Owner exists');
         _transferOwnership(owner_);
     }
     function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_) public onlyOwner{
-//        address[] memory defaultOperators = new address[](0);
-//        require(owner() == address(0), 'Already initialized!');
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         _name = name_;
         _symbol = symbol_;
