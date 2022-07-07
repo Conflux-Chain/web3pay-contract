@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { APICoin, APPCoin } from "../typechain";
 import { ContractReceipt } from "ethers";
+import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
@@ -17,6 +18,21 @@ function dumpEvent(receipt: ContractReceipt) {
     receipt.events?.map((e) => `${e.address} ${e.event}, ${e.args}`).join("\n")
   );
   return receipt;
+}
+async function deployAndDeposit(signer2:SignerWithAddress) {
+  const acc2 = await signer2.getAddress();
+  const api = (await deployProxy("APICoin", [])) as APICoin;
+  const app = (await deployProxy("APPCoin", [
+    api.address,
+    acc2, // set acc2 as app owner
+    "APP 1",
+    "APP1",
+  ])) as APPCoin;
+  await api
+      .depositToApp(app.address, { value: parseEther("1") })
+      .then((res) => res.wait());
+  const app2 = await app.connect(signer2);
+  return {api, app, app2}
 }
 describe("ApiCoin", async function () {
   const signerArr = await ethers.getSigners();
@@ -118,9 +134,9 @@ describe("ApiCoin", async function () {
         .then((res) => res.wait())
     ).to.be.revertedWith(`Not permitted`);
 
-    // await expect(
-    //   app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
-    // ).to.be.revertedWith(`Not permitted`);
+    await expect(
+      app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
+    ).to.be.revertedWith(`Not permitted`);
 
     await expect(app2.setResourceWeight(0, "p0", 10)).to.be.revertedWith(
       `not app owner`
@@ -133,17 +149,7 @@ describe("ApiCoin", async function () {
     //   });
   });
   it("withdraw", async function () {
-    const api = (await deployProxy("APICoin", [])) as APICoin;
-    const app = (await deployProxy("APPCoin", [
-      api.address,
-      acc2, // set acc2 as app owner
-      "APP 1",
-      "APP1",
-    ])) as APPCoin;
-    await api
-      .depositToApp(app.address, { value: parseEther("1") })
-      .then((res) => res.wait());
-    const app2 = await app.connect(signer2);
+    const {api, app, app2} = await deployAndDeposit(signer2);
     // freeze acc1 by admin
     await app2.freeze(acc1, true).then((res) => res.wait());
     await expect(
@@ -170,5 +176,21 @@ describe("ApiCoin", async function () {
       .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(app.address, acc1, parseEther("1"));
     expect(await app.balanceOf(acc1)).eq(0);
+
+  });
+  it("charge and auto refund", async () => {
+    const {api, app, app2} = await deployAndDeposit(signer2);
+    // charge without refund
+    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
+        .to.be.emit(app, app.interface.events["Transfer(address,address,uint256)"].name)
+        .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.1"))
+    await expect(app.withdrawRequest()).emit(app, app.interface.events["Frozen(address)"].name)
+        .withArgs(acc1)
+    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
+        .to.be.emit(app, app.interface.events["Transfer(address,address,uint256)"].name)
+        .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.8"))// burn
+        .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
+        .withArgs(app.address, acc1, parseEther("0.8")) // refund api code
+    expect(1).eq(1);
   });
 });
