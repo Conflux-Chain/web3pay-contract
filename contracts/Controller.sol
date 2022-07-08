@@ -55,17 +55,17 @@ contract Controller is Ownable {
         emit APP_CREATED(address(app), msg.sender);
     }
     function listAppByCreator(address creator_, uint32 offset, uint limit) public view returns (AppInfo[] memory apps, uint256 total) {
-        AppInfo[] memory creator = creatorAppTrack[creator_];
-        require(offset <= creator.length, 'invalid offset');
-        if (offset + limit >= creator.length) {
-            limit = creator.length - offset;
+        AppInfo[] memory createdApp = creatorAppTrack[creator_];
+        require(offset <= createdApp.length, 'invalid offset');
+        if (offset + limit >= createdApp.length) {
+            limit = createdApp.length - offset;
         }
         AppInfo[] memory arr = new AppInfo[](limit);
         for(uint i=0; i<limit; i++) {
-            arr[i] = creator[offset];
+            arr[i] = createdApp[offset];
             offset += 1;
         }
-        return (arr, creator.length);
+        return (arr, createdApp.length);
     }
     /** @dev List created DApp settlement contracts. */
     function listApp(uint offset, uint limit) public view returns (address[] memory, uint total){
