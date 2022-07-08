@@ -1,0 +1,16 @@
+## `IAPPCoin`
+
+
+
+
+
+
+### `apiCoin() → address` (external)
+
+
+
+
+
+
+
+
