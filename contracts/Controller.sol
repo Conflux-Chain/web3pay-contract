@@ -56,6 +56,9 @@ contract Controller is Ownable {
     }
     function listAppByCreator(address creator_, uint32 offset, uint limit) public view returns (AppInfo[] memory apps, uint256 total) {
         AppInfo[] memory createdApp = creatorAppTrack[creator_];
+        if (offset == 0 && limit >= createdApp.length) {
+            return (createdApp, createdApp.length);
+        }
         require(offset <= createdApp.length, 'invalid offset');
         if (offset + limit >= createdApp.length) {
             limit = createdApp.length - offset;
