@@ -28,11 +28,7 @@ contract Controller is Ownable {
         address addr;
         uint256 blockTime;
     }
-    struct Creator {
-        uint32 nextAppId;
-        mapping(uint32=>AppInfo) createdApp;
-    }
-    mapping(address=>Creator) creatorAppTrack;
+    mapping(address=>AppInfo[]) creatorAppTrack;
 
     constructor (address api_){
         APPCoin appImpl = new APPCoin();
@@ -54,24 +50,22 @@ contract Controller is Ownable {
         appMapping[nextId] = address(app);
         nextId += 1;
         // track this creator's app.
-        Creator storage creator = creatorAppTrack[msg.sender];
-        creator.createdApp[creator.nextAppId] = AppInfo(address(app), block.timestamp);
-        creator.nextAppId += 1;
+        creatorAppTrack[msg.sender].push(AppInfo(address(app), block.timestamp));
 
         emit APP_CREATED(address(app), msg.sender);
     }
-    function listAppByCreator(address creator_, uint32 offset, uint limit) public view returns (AppInfo[] memory apps, uint32 total) {
-        Creator storage creator = creatorAppTrack[creator_];
-        require(offset <= creator.nextAppId, 'invalid offset');
-        if (offset + limit >= creator.nextAppId) {
-            limit = creator.nextAppId - offset;
+    function listAppByCreator(address creator_, uint32 offset, uint limit) public view returns (AppInfo[] memory apps, uint256 total) {
+        AppInfo[] memory creator = creatorAppTrack[creator_];
+        require(offset <= creator.length, 'invalid offset');
+        if (offset + limit >= creator.length) {
+            limit = creator.length - offset;
         }
         AppInfo[] memory arr = new AppInfo[](limit);
         for(uint i=0; i<limit; i++) {
-            arr[i] = creator.createdApp[offset];
+            arr[i] = creator[offset];
             offset += 1;
         }
-        return (arr, creator.nextAppId);
+        return (arr, creator.length);
     }
     /** @dev List created DApp settlement contracts. */
     function listApp(uint offset, uint limit) public view returns (address[] memory, uint total){
