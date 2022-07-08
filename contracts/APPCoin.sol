@@ -143,7 +143,7 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
     }
     // ------------ public -------------
     function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
-        require(offset < nextWeightIndex, 'invalid offset');
+        require(offset <= nextWeightIndex, 'invalid offset');
         if (offset + limit >= nextWeightIndex) {
             limit = nextWeightIndex - offset;
         }
