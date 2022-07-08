@@ -38,7 +38,6 @@ contract Controller is Ownable {
     function createApp(string memory name_, string memory symbol_) public {
         APPCoin app = APPCoin((address(new BeaconProxy(address(appBase), ""))));
         app.initOwner(address(this));
-//        console.log("owner of '%s' is '%s'", address(app), address(app.owner()));
         app.init(api, msg.sender, name_, symbol_);
         app.transferOwnership(owner());
         appMapping[nextId] = address(app);
