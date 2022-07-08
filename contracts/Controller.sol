@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./APPCoin.sol";
-import "./APICoin.sol";
 import "hardhat/console.sol";
 /**
 * @title Controller
@@ -18,21 +17,18 @@ import "hardhat/console.sol";
 */
 
 contract Controller is Ownable {
-    UpgradeableBeacon public appUpgradeableBeacon;
-    APICoin public apiProxy;
+    address public appBase;
+    address public api;
     /** @dev APP_CREATED event */
     event APP_CREATED(address indexed addr, address indexed appOwner);
     uint256 public nextId;
     mapping(uint256=>address) public appMapping;
-    constructor (){
-        APICoin apiCoin = new APICoin();
-        bytes memory data = abi.encodeWithSelector(APICoin.initialize.selector);
-        apiProxy = APICoin(address(new ERC1967Proxy(address(apiCoin), data)));
-        apiProxy.transferOwnership(msg.sender);
 
         APPCoin appImpl = new APPCoin();
-        appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
+        UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
         appUpgradeableBeacon.transferOwnership(msg.sender);
+        appBase = address(appUpgradeableBeacon);
+        api = api_;
     }
     /**
     * @dev Create/register a DApp.
@@ -40,10 +36,10 @@ contract Controller is Ownable {
     * Caller's address will be used as the `appOwner` of the contract.
     */
     function createApp(string memory name_, string memory symbol_) public {
-        APPCoin app = APPCoin((address(new BeaconProxy(address(appUpgradeableBeacon), ""))));
+        APPCoin app = APPCoin((address(new BeaconProxy(address(appBase), ""))));
         app.initOwner(address(this));
-        console.log("owner of '%s' is '%s'", address(app), address(app.owner()));
-        app.init(address(apiProxy), msg.sender, name_, symbol_);
+//        console.log("owner of '%s' is '%s'", address(app), address(app.owner()));
+        app.init(api, msg.sender, name_, symbol_);
         app.transferOwnership(owner());
         appMapping[nextId] = address(app);
         nextId += 1;
@@ -51,7 +47,7 @@ contract Controller is Ownable {
     }
     /** @dev List created DApp settlement contracts. */
     function listApp(uint offset, uint limit) public view returns (address[] memory, uint total){
-        require(offset < nextId, 'invalid offset');
+        require(offset <= nextId, 'invalid offset');
         if (offset + limit >= nextId) {
             limit = nextId - offset;
         }

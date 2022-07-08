@@ -12,7 +12,7 @@ async function attach(name:string, to:string) {
 }
 async function deploy(name:string,args: any[]) {
   const template = await ethers.getContractFactory(name);
-  const deploy = await template.deploy(args)
+  const deploy = await template.deploy(...args)
   const instance = await deploy.deployed();
   console.log(`deploy ${name} at ${instance.address}, tx ${deploy.deployTransaction.hash}`)
   return instance;
@@ -56,8 +56,9 @@ describe("Controller", async function () {
   const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("createApp" , async function (){
-    const controller = await deploy("Controller", []).then(res=>res as Controller);
-    console.log(``)
+    const api = await deployProxy("APICoin", []) as APICoin
+    const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
+
     const tx = await controller.createApp("CoinA", "CA").then(res=>res.wait())
     expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
     // @ts-ignore
@@ -65,7 +66,6 @@ describe("Controller", async function () {
         [0].args[0]
     //
     const app = await attach("APPCoin", createdAppAddr).then(res=>res as APPCoin)
-    const api = await controller.apiProxy().then(res=>attach("APICoin", res)).then(res=>res as APICoin)
     console.log(`app business owner`, await app.appOwner())
     console.log(`app contract owner`, await app.owner())
 
@@ -77,7 +77,7 @@ describe("Controller", async function () {
     expect(await app.symbol()).eq("CA")
   })
   it("list created app", async function (){
-    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    const controller = await deploy("Controller", [ethers.constants.AddressZero]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
     await controller.createApp("app 2", "a2").then(tx=>tx.wait());
     const [arr, total] = await controller.listApp(0, 10);
@@ -85,9 +85,10 @@ describe("Controller", async function () {
     expect(total).eq(2)
   })
   it("upgrade api contract, UUPS", async function (){
-    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    const api = await deployProxy("APICoin", []) as APICoin
+    const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
-    const api1addr = await controller.apiProxy();
+    const api1addr = api.address
     const app1 = await controller.appMapping(0)
     const originApp1 = await attach("APICoin", api1addr) as APICoin
     await originApp1.depositToApp(app1, {value: parseEther("1")}).then(tx=>tx.wait())
@@ -101,14 +102,14 @@ describe("Controller", async function () {
   })
 
   it("upgrade app, beacon", async function (){
-    const controller = await deploy("Controller", []).then(res=>res as Controller);
+    const controller = await deploy("Controller", [ethers.constants.AddressZero]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
 
     const app1addr = await controller.appMapping(0);
     const originApp1 = await attach("APPCoin", app1addr) as APPCoin
     await originApp1.setResourceWeight(0, "path0", 10).then(tx=>tx.wait())
 
-    const appUpgradeableBeacon = await controller.appUpgradeableBeacon().then(addr=>attach("UpgradeableBeacon", addr))
+    const appUpgradeableBeacon = await controller.appBase().then(addr=>attach("UpgradeableBeacon", addr))
         .then(c=>c as UpgradeableBeacon);
     // check owner
     expect(await appUpgradeableBeacon.owner()).eq(acc1);
