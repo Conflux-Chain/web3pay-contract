@@ -44,9 +44,8 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _disableInitializers();
     }
 
-    function initialize() initializer public {
-        address[] memory defaultOperators = new address[](0);
-        __ERC777_init("API Coin", "APIC", defaultOperators);
+    function initialize(string memory name_, string memory symbol_, address[] calldata defaultOperators) initializer public {
+        __ERC777_init(name_, symbol_, defaultOperators);
         __Pausable_init();
         __Ownable_init();
         __UUPSUpgradeable_init();
