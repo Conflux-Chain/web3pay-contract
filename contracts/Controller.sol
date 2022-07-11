@@ -24,6 +24,13 @@ contract Controller is Ownable {
     uint256 public nextId;
     mapping(uint256=>address) public appMapping;
 
+    struct AppInfo {
+        address addr;
+        uint256 blockTime;
+    }
+    mapping(address=>AppInfo[]) creatorAppTrack;
+
+    constructor (address api_){
         APPCoin appImpl = new APPCoin();
         UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
         appUpgradeableBeacon.transferOwnership(msg.sender);
@@ -42,7 +49,26 @@ contract Controller is Ownable {
         app.transferOwnership(owner());
         appMapping[nextId] = address(app);
         nextId += 1;
+        // track this creator's app.
+        creatorAppTrack[msg.sender].push(AppInfo(address(app), block.timestamp));
+
         emit APP_CREATED(address(app), msg.sender);
+    }
+    function listAppByCreator(address creator_, uint32 offset, uint limit) public view returns (AppInfo[] memory apps, uint256 total) {
+        AppInfo[] memory createdApp = creatorAppTrack[creator_];
+        if (offset == 0 && limit >= createdApp.length) {
+            return (createdApp, createdApp.length);
+        }
+        require(offset <= createdApp.length, 'invalid offset');
+        if (offset + limit >= createdApp.length) {
+            limit = createdApp.length - offset;
+        }
+        AppInfo[] memory arr = new AppInfo[](limit);
+        for(uint i=0; i<limit; i++) {
+            arr[i] = createdApp[offset];
+            offset += 1;
+        }
+        return (arr, createdApp.length);
     }
     /** @dev List created DApp settlement contracts. */
     function listApp(uint offset, uint limit) public view returns (address[] memory, uint total){

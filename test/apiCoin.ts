@@ -75,6 +75,12 @@ describe("Controller", async function () {
     expect(await api.owner()).eq(acc1)
     expect(await app.name()).eq("CoinA")
     expect(await app.symbol()).eq("CA")
+    // list created app
+    controller.createApp("CoinB", "CB").then(res=>res.wait())
+    const [createdAppArr, total] = await controller.listAppByCreator(acc1, 0, 10)
+    expect(createdAppArr.length).eq(2)
+    expect(total).eq(2)
+    expect(createdAppArr[0].addr).eq(createdAppAddr)
   })
   it("list created app", async function (){
     const controller = await deploy("Controller", [ethers.constants.AddressZero]).then(res=>res as Controller);
