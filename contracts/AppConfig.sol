@@ -3,13 +3,29 @@ pragma solidity ^0.8.4;
 
 abstract contract AppConfig {
     // resources
-    event ResourceChanged(uint32 indexed index, uint32 weight);
-    struct WeightEntry {
+    event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
+    struct ConfigEntry {
         string resourceId;
         uint32 weight;
+        uint32 index; // index in indexArray
     }
-    uint32 public nextWeightIndex;
-    mapping(uint32=>WeightEntry) public resourceWeights;
+    // auto-increment id, starts from 1
+    uint32 public nextConfigId;
+    // store, key is auto-generated id
+    mapping(uint32=> ConfigEntry) public resourceConfigures;
+    // order of id. Deletion needs it.
+    uint32[] public indexArray;
+    // resourceId => id
+    mapping(string=>uint32) resources;
+
+    enum OP {ADD,UPDATE,DELETE}
+
+    struct ConfigRequest {
+        uint32 id;
+        string resourceId;
+        uint32 weight;
+        OP op;
+    }
 
     constructor(){
         // nothing
@@ -17,37 +33,72 @@ abstract contract AppConfig {
 
     function _authorizeAppConfig() internal virtual;
 
-    function setResourceWeightBatch(uint32[] calldata indexArr,
-        string[] calldata resourceIdArr,
-        uint32[] calldata weightArr) public {
+    function configResourceBatch(ConfigRequest[] memory entries) public {
         _authorizeAppConfig();
-        require(indexArr.length == resourceIdArr.length, 'length mismatch');
-        require(indexArr.length == weightArr.length, 'length mismatch');
-        for(uint256 i=0; i<indexArr.length; i++) {
-            setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
+        for(uint256 i=0; i<entries.length; i++) {
+            ConfigRequest memory entry = entries[i];
+            configResource(entry);
         }
     }
 
-    function setResourceWeight(uint32 index, string calldata resourceId, uint32 weight) public {
+    function configResource(ConfigRequest memory entry) public {
         _authorizeAppConfig();
-        require(index <= nextWeightIndex, 'invalid index');
-        if (index == nextWeightIndex) {
-            nextWeightIndex += 1;
+        _configResource(entry);
+    }
+    function _configResource(ConfigRequest memory entry) internal {
+        uint32 id = entry.id;
+        string memory resourceId = entry.resourceId;
+        uint32 weight = entry.weight;
+        OP op = entry.op;
+        if (op == OP.ADD) {
+            // id starts from 1, if resourceId=>id > 0, it's added already.
+            require(resources[resourceId] == 0, 'resource already added');
+            require(id == 0, "id should be zero when adding");
+
+            id = nextConfigId;
+            nextConfigId += 1;
+
+            resources[resourceId] = id;
+            resourceConfigures[id] = ConfigEntry(resourceId, weight, uint32(indexArray.length));
+
+            // track index.
+            indexArray.push(id);
+        } else if (op == OP.UPDATE) {
+            require(id > 0, 'invalid id');
+            require(resources[resourceId] == id, 'id/resourceId mismatch');
+            resourceConfigures[id].weight = weight;
+        } else if (op == OP.DELETE) {
+            require(resources[resourceId] == id, 'resource id mismatch');
+            require(id > 1, 'can not delete id 1');
+            uint32 lastIdValue = indexArray[indexArray.length - 1];
+            indexArray.pop();
+            if (id == lastIdValue) {
+                // just the last one
+            } else {
+                uint32 indexInArray = resourceConfigures[id].index;
+                // move id at the end to current index
+                indexArray[indexInArray] = lastIdValue;
+                // update index for that entry
+                resourceConfigures[lastIdValue].index = indexInArray;
+            }
+            delete resources[resourceId];
+            delete resourceConfigures[id];
         }
-        resourceWeights[index] = WeightEntry(resourceId, weight);
-        emit ResourceChanged(index, weight);
+        emit ResourceChanged(id, weight, op);
     }
 
-    function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
-        require(offset <= nextWeightIndex, 'invalid offset');
-        if (offset + limit >= nextWeightIndex) {
-            limit = nextWeightIndex - offset;
+    function listResources(uint256 offset, uint256 limit) public view returns(ConfigEntry[] memory, uint256 total) {
+        total = indexArray.length;
+        require(offset <= total, 'invalid offset');
+        if (offset + limit >= total) {
+            limit = total - offset;
         }
-        WeightEntry[] memory slice = new WeightEntry[](limit);
+        ConfigEntry[] memory slice = new ConfigEntry[](limit);
         for(uint32 i=0; i<limit;i++) {
-            slice[i] = resourceWeights[offset];
+            uint32 id = indexArray[i];
+            slice[i] = resourceConfigures[id];
             offset ++;
         }
-        return slice;
+        return (slice, total);
     }
 }

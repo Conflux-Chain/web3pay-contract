@@ -141,6 +141,9 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
         apiCoin = apiCoin_;
         appOwner = appOwner_;
         forceWithdrawAfterBlock = 10_000;
+        nextConfigId = 1; // starts from 1, not zero
+        ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
+        _configResource(request);
     }
 
     function pause() public onlyOwner {
