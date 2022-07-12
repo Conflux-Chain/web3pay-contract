@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import {APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
-// import assert from "assert";
+import assert from "assert";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
@@ -294,8 +294,31 @@ describe("ApiCoin", async function () {
   });
   it("track paid app", async () => {
     const {api, app, app2} = await deployAndDeposit(signer1);
-    const [list,total] = await api.listPaidApp(acc1, 0, 10);
-    // assert(total.toNumber() == 1, "should have 1 paid app")
-    // assert(list[0] === app.address, "should be the right app")
+    let [list,total] = await api.listPaidApp(acc1, 0, 10);
+    assert(total.toNumber() == 1, "should have 1 paid app")
+    assert(list[0] === app.address, "should be the right app")
+    // create new app
+    const appNew2 = await deployApp("APPCoin", [
+      api.address,
+      acc2, // set acc2 as app owner
+      "APP 2",
+      "APP2",
+    ])
+    await api
+        .depositToApp(appNew2.address, { value: parseEther("1") })
+        .then((res) => res.wait());
+
+    [list,total] = await api.listPaidApp(acc1, 0, 10);
+    assert(total.toNumber() == 2, "should have 2 paid app")
+    assert(list[1] === appNew2.address, "should be the right app")
+
+    // deposit to app1 again
+    await api
+        .depositToApp(app.address, { value: parseEther("1") })
+        .then((res) => res.wait());
+
+    [list,total] = await api.listPaidApp(acc1, 0, 10);
+    assert(total.toNumber() == 2, "should have 2 paid app")
+    assert(list[0] === app.address, "should be the right app")
   });
 });
