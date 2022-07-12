@@ -18,6 +18,10 @@ import "./IAPPCoin.sol";
  *
  */
 contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+    /** user address => appArray ever deposited to */
+    mapping(address=>address[]) userPaidAppArray;
+    /** user address => (app address=> total deposit amount) */
+    mapping(address=>mapping(address=>uint256)) userPaidAppMap;
     /** @dev Used by API consumer to deposit for specified app.
      *
      * For now it only takes CFX, and 1 CFX exchanges 1 APP Coin.
@@ -27,14 +31,36 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
      *
      * Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
      */
-    function depositToApp(address appCoin) public payable {
+    function depositToApp(address appCoin) public payable whenNotPaused {
         require(msg.value > 0, 'Zero value');
         require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
         _mint(msg.sender, msg.value, '','');
+        if (userPaidAppMap[msg.sender][appCoin] > 0) {
+            userPaidAppMap[msg.sender][appCoin] += msg.value;
+        } else {
+            userPaidAppMap[msg.sender][appCoin] = msg.value;
+            userPaidAppArray[msg.sender].push(appCoin);
+        }
         send(appCoin, msg.value, "");
     }
+    function listPaidApp(address user_, uint offset, uint limit) public view returns (address[] memory apps, uint total) {
+        address[] memory paidArray = userPaidAppArray[user_];
+        if (offset == 0 && limit >= paidArray.length) {
+            return (paidArray, paidArray.length);
+        }
+        require(offset <= paidArray.length, 'invalid offset');
+        if (offset + limit >= paidArray.length) {
+            limit = paidArray.length - offset;
+        }
+        address [] memory arr = new address[](limit);
+        for(uint i=0; i<limit; i++) {
+            arr[i] = paidArray[offset];
+            offset += 1;
+        }
+        return (arr, paidArray.length);
+    }
     /** @dev Used by anyone who holds API coin to exchange CFX back. */
-    function refund(uint256 amount) public {
+    function refund(uint256 amount) public whenNotPaused {
         super.burn(amount, "refund");
         payable(msg.sender).transfer(amount);
     }
