@@ -3,6 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import {APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
+// import assert from "assert";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
@@ -38,7 +39,7 @@ function dumpEvent(receipt: ContractReceipt) {
 }
 async function deployAndDeposit(signer2:SignerWithAddress) {
   const acc2 = await signer2.getAddress();
-  const api = (await deployProxy("APICoin", [])) as APICoin;
+  const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
   const app = (await deployApp("APPCoin", [
     api.address,
     acc2, // set acc2 as app owner
@@ -56,7 +57,7 @@ describe("Controller", async function () {
   const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("createApp" , async function (){
-    const api = await deployProxy("APICoin", []) as APICoin
+    const api = await deployProxy("APICoin", ["main coin", "mc", []]) as APICoin
     const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
 
     const tx = await controller.createApp("CoinA", "CA").then(res=>res.wait())
@@ -91,7 +92,7 @@ describe("Controller", async function () {
     expect(total).eq(2)
   })
   it("upgrade api contract, UUPS", async function (){
-    const api = await deployProxy("APICoin", []) as APICoin
+    const api = await deployProxy("APICoin", ["main coin", "mc", []]) as APICoin
     const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
     const api1addr = api.address
@@ -135,7 +136,7 @@ describe("ApiCoin", async function () {
   const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
-    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
@@ -161,7 +162,7 @@ describe("ApiCoin", async function () {
     //
   });
   it("set resource weights", async function () {
-    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
@@ -201,7 +202,7 @@ describe("ApiCoin", async function () {
     expect(w).eq(10);
   });
   it("check permission", async function () {
-    const api = (await deployProxy("APICoin", [])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
@@ -290,5 +291,11 @@ describe("ApiCoin", async function () {
         .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
         .withArgs(app.address, acc1, parseEther("0.8")) // refund api code
     expect(1).eq(1);
+  });
+  it("track paid app", async () => {
+    const {api, app, app2} = await deployAndDeposit(signer1);
+    const [list,total] = await api.listPaidApp(acc1, 0, 10);
+    // assert(total.toNumber() == 1, "should have 1 paid app")
+    // assert(list[0] === app.address, "should be the right app")
   });
 });
