@@ -5,7 +5,6 @@
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
 import {APICoin, Controller, ERC1967Proxy} from "../typechain";
-import {verifyContract} from "./verify-scan";
 const {parseEther, formatEther} = ethers.utils
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -24,7 +23,6 @@ async function main() {
   const apiImpl = await deploy("APICoin", []) as APICoin
   const tmpApiProxy = await attach("APICoin", ethers.constants.AddressZero) as APICoin
   const initReq = await tmpApiProxy.populateTransaction.initialize(`API ${dateStr}`, `API${dateStr}`, []);
-  verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
   // console.log(`constructor data`, initReq.data)
 
   const apiProxy = await deploy("ERC1967Proxy", [apiImpl.address, initReq.data]) as ERC1967Proxy

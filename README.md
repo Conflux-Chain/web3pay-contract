@@ -16,6 +16,11 @@ create .env file with these variables configured:
 - TEST_RPC_URL: blockchain rpc endpoint.
 - PRIVATE_KEY: account to deploy.
 
-run `yarn test-deploy`
+run 
+```shell
+# generate files needed when verifying contract on scan
+./scripts/flatten.sh  
+yarn test-deploy
+```
 
 Make sure account has enough balance.
