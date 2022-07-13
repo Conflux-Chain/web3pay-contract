@@ -4,7 +4,8 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
-import {APICoin, ERC1967Proxy} from "../typechain";
+import {APICoin, Controller, ERC1967Proxy} from "../typechain";
+import {verifyContract} from "./verify-scan";
 const {parseEther, formatEther} = ethers.utils
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -17,15 +18,23 @@ async function main() {
   const acc1 = signer.address
   console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, await ethers.provider.getNetwork())
 
+  const today = new Date()
+  const dateStr = [today.getDate(), today.getHours(), today.getMinutes(), today.getSeconds()].map(n=>n.toString().padStart(2, '0')).join('')
+
   const apiImpl = await deploy("APICoin", []) as APICoin
   const tmpApiProxy = await attach("APICoin", ethers.constants.AddressZero) as APICoin
-  const initReq = await tmpApiProxy.populateTransaction.initialize("test API 1", "Test1", []);
-  console.log(`constructor data`, initReq.data)
+  const initReq = await tmpApiProxy.populateTransaction.initialize(`API ${dateStr}`, `API${dateStr}`, []);
+  verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
+  // console.log(`constructor data`, initReq.data)
 
   const apiProxy = await deploy("ERC1967Proxy", [apiImpl.address, initReq.data]) as ERC1967Proxy
   const api = await attach("APICoin", apiProxy.address) as APICoin
 
-  await deploy("Controller", [api!.address]);
+  const controller = await deploy("Controller", [api!.address]) as Controller;
+  await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`).then(tx=>tx.wait())
+  console.log(`create new app ${await controller.appMapping(0)}`)
+  //
+  console.log(`app impl at ${await controller.appBase()}`)
 }
 async function attach(name:string, to:string) {
   const template = await ethers.getContractFactory(name);
