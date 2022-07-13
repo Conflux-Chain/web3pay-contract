@@ -6,7 +6,7 @@
 import * as fs from "fs";
 
 async function modifyFieldModifier() {
-	const path = '../node_modules/@openzeppelin/contracts/token/ERC777/ERC777.sol'
+	const path = './node_modules/@openzeppelin/contracts/token/ERC777/ERC777.sol'
 	const content = fs.readFileSync(path).toString()
 	const replaced = content
 		.replace("string private _name", "string internal _name")
