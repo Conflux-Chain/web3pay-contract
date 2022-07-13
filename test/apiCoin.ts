@@ -38,20 +38,20 @@ function dumpEvent(receipt: ContractReceipt) {
   );
   return receipt;
 }
-async function deployAndDeposit(signer2:SignerWithAddress, appTemplate="APPCoin") {
-  const acc2 = await signer2.getAddress();
+async function deployAndDeposit(appOwner:SignerWithAddress, appTemplate="APPCoin") {
+  const ownerAddr = await appOwner.getAddress();
   const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
-  const app = (await deployApp(appTemplate, [
+  const appWithOwnerSet = (await deployApp(appTemplate, [
     api.address,
-    acc2, // set acc2 as app owner
+    ownerAddr, // set app owner
     "APP 1",
     "APP1",
-  ])) as APPCoin;
+  ])).connect(appOwner) as APPCoin;
   await api
-      .depositToApp(app.address, { value: parseEther("1") })
+      .depositToApp(appWithOwnerSet.address, { value: parseEther("1") })
       .then((res) => res.wait());
-  const app2 = await app.connect(signer2);
-  return {api, app, app2}
+  const appWithDefaultOwner = await appWithOwnerSet.connect(api.signer);
+  return {api, app:appWithOwnerSet, app2:appWithDefaultOwner}
 }
 describe("Controller", async function () {
   const signerArr = await ethers.getSigners();
@@ -267,9 +267,9 @@ describe("ApiCoin", async function () {
     //   });
   });
   it("withdraw", async function () {
-    const {api, app, app2} = await deployAndDeposit(signer2);
+    const {api, app, app2} = await deployAndDeposit(signer1);
     // freeze acc1 by admin
-    await app2.freeze(acc1, true).then((res) => res.wait());
+    await app.freeze(acc1, true).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
     ).to.be.revertedWith(`Frozen by admin`);
@@ -277,7 +277,7 @@ describe("ApiCoin", async function () {
       app.withdrawRequest().then((res) => res.wait())
     ).to.be.revertedWith(`Account is frozen`);
     // unfreeze
-    await app2.freeze(acc1, false).then((res) => res.wait());
+    await app.freeze(acc1, false).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
     ).to.be.revertedWith(`Withdraw request first`);
@@ -289,7 +289,7 @@ describe("ApiCoin", async function () {
     ).to.be.revertedWith(`Waiting time`);
 
     // should transfer api coin from App to acc1
-    await app2.setForceWithdrawAfterBlock(0).then((res) => res.wait());
+    await app.setForceWithdrawAfterBlock(0).then((res) => res.wait());
     expect(await app.forceWithdraw().then((res) => res.wait()))
       .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(app.address, acc1, parseEther("1"));
@@ -313,16 +313,16 @@ describe("ApiCoin", async function () {
   });
   it("airdrop", async () => {
     const {api, app, app2} = await deployAndDeposit(signer2, "Airdrop");
-    const badApp2 = await app2.connect(signer3) as any as Airdrop
+    const badApp2 = app2 as any as Airdrop
     await expect(badApp2.airdrop(acc1, parseEther('1'), "fail")).to.be.revertedWith(`not app owner`)
-    const airdrop = app2 as any as Airdrop
+    const airdrop = app as any as Airdrop
     const receipt = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']).then(tx=>tx.wait());
     expect(receipt).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)
         .withArgs(acc1, parseEther("10"), 'test')
     let [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
     assert( total.eq(parseEther("11")), `should be 11 app coin, ${total}`)
     assert( drop.eq(parseEther("10")), `should be 10 airdrop, ${drop}`)
-    await expect(app2.charge(acc1, parseEther("1"), Buffer.from("sub 1 left 1 + 9")))
+    await expect(app.charge(acc1, parseEther("1"), Buffer.from("sub 1 left 1 + 9")))
         .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("1"))
         .emit(airdrop, airdrop.interface.events["Transfer(address,address,uint256)"].name)
         .withArgs(acc1, ethers.constants.AddressZero, parseEther("0"));
@@ -331,7 +331,7 @@ describe("ApiCoin", async function () {
     assert( drop.eq(parseEther("9")), `should be 9 airdrop, ${drop}`)
     assert(parseEther("1").eq(await airdrop.balanceOf(acc1)), "should be 1 origin app coin")
 
-    await expect(app2.charge(acc1, parseEther("9.5"), Buffer.from("sub 9.5 left 0.5 + 0")))
+    await expect(app.charge(acc1, parseEther("9.5"), Buffer.from("sub 9.5 left 0.5 + 0")))
         .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("9"))
         .emit(airdrop, airdrop.interface.events["Transfer(address,address,uint256)"].name)
         .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.5"));
