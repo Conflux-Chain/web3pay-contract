@@ -75,7 +75,7 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
         IERC777(apiCoin).send(to, amount, "takeProfit");
     }
     /** @dev Charge fee*/
-    function charge(address account, uint256 amount, bytes memory data) public onlyAppOwner whenNotPaused{
+    function charge(address account, uint256 amount, bytes memory data) public virtual onlyAppOwner whenNotPaused{
         _burn(account, amount, "", data);
         totalCharged += amount;
         if (frozenMap[account] > 1) {
@@ -156,5 +156,9 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
 
     function _authorizeAppConfig() internal override onlyAppOwner {
         // nothing but a modifier to check permission
+    }
+
+    function balanceOfWithAirdrop(address owner) virtual view public returns (uint256 total, uint256 airdrop) {
+        return (balanceOf(owner), 0);
     }
 }
