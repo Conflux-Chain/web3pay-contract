@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "./AppConfig.sol";
 
 /** @dev Settlement contract between API consumer and API supplier.
  *
@@ -21,7 +22,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
  * - forceWithdraw
  * - freeze
  */
-contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
+contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     address public apiCoin;
     address public appOwner;
@@ -29,14 +30,6 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
         require(msg.sender == appOwner, 'not app owner');
         _;
     }
-    // resources
-    event ResourceChanged(uint32 indexed index);
-    struct WeightEntry {
-        string resourceId;
-        uint weight;
-    }
-    uint32 public nextWeightIndex;
-    mapping(uint32=>WeightEntry) public resourceWeights;
     // frozen; value 1 means frozen by manager;
     mapping(address=>uint256) public frozenMap;
     event Frozen(address indexed addr);
@@ -123,37 +116,11 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
         emit Withdraw(msg.sender, appCoinLeft);
     }
     // -------- app owner operation -----------
-    function setResourceWeightBatch(uint32[] calldata indexArr, string[] calldata resourceIdArr, uint[] calldata weightArr) onlyOwner public {
-        require(indexArr.length == resourceIdArr.length, 'length mismatch');
-        require(indexArr.length == weightArr.length, 'length mismatch');
-        for(uint256 i=0; i<indexArr.length; i++) {
-            setResourceWeight(indexArr[i], resourceIdArr[i], weightArr[i]);
-        }
-    }
-    function setResourceWeight(uint32 index, string calldata resourceId, uint weight) onlyAppOwner public {
-        require(index <= nextWeightIndex, 'invalid index');
-        if (index == nextWeightIndex) {
-            nextWeightIndex += 1;
-        }
-        resourceWeights[index] = WeightEntry(resourceId, weight);
-        emit ResourceChanged(index);
-    }
     function setForceWithdrawAfterBlock(uint256 diff) public onlyAppOwner whenNotPaused{
         forceWithdrawAfterBlock = diff;
     }
     // ------------ public -------------
-    function listResources(uint32 offset, uint32 limit) public view returns(WeightEntry[] memory) {
-        require(offset <= nextWeightIndex, 'invalid offset');
-        if (offset + limit >= nextWeightIndex) {
-            limit = nextWeightIndex - offset;
-        }
-        WeightEntry[] memory slice = new WeightEntry[](limit);
-        for(uint32 i=0; i<limit;i++) {
-            slice[i] = resourceWeights[offset];
-            offset ++;
-        }
-        return slice;
-    }
+
     // -------------------------open zeppelin----------------------------
     constructor()
         ERC777("", "", new address[](0)) {
@@ -174,6 +141,9 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
         apiCoin = apiCoin_;
         appOwner = appOwner_;
         forceWithdrawAfterBlock = 10_000;
+        nextConfigId = 1; // starts from 1, not zero
+        ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
+        _configResource(request);
     }
 
     function pause() public onlyOwner {
@@ -182,5 +152,9 @@ contract APPCoin is ERC777, Pausable, Ownable, IERC777Recipient {
 
     function unpause() public onlyOwner {
         _unpause();
+    }
+
+    function _authorizeAppConfig() internal override onlyAppOwner {
+        // nothing but a modifier to check permission
     }
 }

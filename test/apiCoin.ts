@@ -7,6 +7,7 @@ import assert from "assert";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
+enum OP {ADD,UPDATE,DELETE}
 async function attach(name:string, to:string) {
   const template = await ethers.getContractFactory(name);
   return template.attach(to)
@@ -114,7 +115,7 @@ describe("Controller", async function () {
 
     const app1addr = await controller.appMapping(0);
     const originApp1 = await attach("APPCoin", app1addr) as APPCoin
-    await originApp1.setResourceWeight(0, "path0", 10).then(tx=>tx.wait())
+    await originApp1.configResource({id:0, resourceId:"path0", weight:10, op: OP.ADD}).then(tx=>tx.wait())
 
     const appUpgradeableBeacon = await controller.appBase().then(addr=>attach("UpgradeableBeacon", addr))
         .then(c=>c as UpgradeableBeacon);
@@ -128,7 +129,7 @@ describe("Controller", async function () {
     // call new method
     const appV2 = await v2.attach(app1addr)
     expect(await appV2.version()).eq("App v2");
-    expect(await originApp1.resourceWeights(0).then(info=>info.weight)).eq(10)
+    expect(await originApp1.resourceConfigures(2).then(info=>info.weight)).eq(10)
   })
 })
 describe("ApiCoin", async function () {
@@ -161,7 +162,7 @@ describe("ApiCoin", async function () {
     });
     //
   });
-  it("set resource weights", async function () {
+  it("config resource weights", async function () {
     const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
@@ -169,37 +170,55 @@ describe("ApiCoin", async function () {
       "APP 1",
       "APP1",
     ])) as APPCoin;
-    let index = 0;
+    // default resource weight 1, id 1, index 0
+    let defaultConfig = await app.resourceConfigures(1);
+    assert(defaultConfig.weight == 1,'default weight should be 1')
+    assert(defaultConfig.resourceId == 'default','default resourceId should be <default>')
+    assert(defaultConfig.index == 0,'default resource index should be 0')
+    // add new one, auto id 2, index 1
     await app
-      .setResourceWeight(index, "path1", 1)
+      .configResource({id: 0, resourceId: "path2", weight: 2, op: OP.ADD})
       .then((res) => res.wait())
       .then(dumpEvent)
-    expect(
-      await app.resourceWeights(index).then((res) => {
-        // eslint-disable-next-line no-unused-vars
-        const [path, weight] = res;
-        return weight;
-      })
-    ).to.be.eq(1);
+    let config2 = await app.resourceConfigures(2)
+    expect(config2.index == 1, 'index should be 1 for config 2');
 
-    //
-    expect(await app.nextWeightIndex()).to.be.eq(index + 1);
+    assert(await app.nextConfigId() == 3, 'next id should be 3')
 
-    index = 3;
+    // update
+    await app.configResource({id: 2, resourceId: "path2", weight:200, op: OP.UPDATE})
+        .then(tx=>tx.wait())
+    config2 = await app.resourceConfigures(2)
+    assert(config2.weight == 200, 'weight should be updated')
+    assert(config2.index == 1, 'index should be 1')
+
+    // id mismatch resource id
     await expect(
-      app.setResourceWeight(index, "pathN", 3).then((res) => res.wait())
-    ).to.be.revertedWith(`invalid index`);
+      app.configResource({id: 1, resourceId: "pathN", weight: 3, op: OP.UPDATE})
+    ).to.be.revertedWith(`id/resourceId mismatch`);
+    // duplicate adding
+    await expect(
+        app.configResource({id: 0, resourceId: "path2", weight: 3, op: OP.ADD})
+    ).to.be.revertedWith(`resource already added`);
     // batch
     await app
-      .setResourceWeightBatch([0, 1, 2], ["p0", "p1", "p2"], [10, 11, 12])
+      .configResourceBatch([
+        {id: 0, resourceId: 'p3', weight: 103, op: OP.ADD}, //add p3, id 3, index 2
+        {id: 0, resourceId: 'p4', weight: 104, op: OP.ADD}, //add p4, id 4, index 3
+        {id: 0, resourceId: 'p5', weight: 105, op: OP.ADD}, //add p5, id 5, index 4
+
+        {id: 4, resourceId: 'p4', weight: 204, op: OP.UPDATE}, //update p4, id 4, index 3
+        {id: 3, resourceId: 'p3', weight: 204, op: OP.DELETE}, //delete p3, id 3, index 2 -- delete
+      ]) // index array [1, 2, 3, 4, 5] delete id 3 index 2 => [1, 2, 5, 4]
       .then((res) => res.wait());
-    expect(await app.nextWeightIndex()).to.be.eq(3);
+    assert(await app.nextConfigId() == 6, 'next id should be 6');
     //
-    const list = await app.listResources(0, 3);
-    expect(list.length).to.be.eq(3);
-    const [[path, w]] = list;
-    expect(path).eq("p0");
-    expect(w).eq(10);
+    const [list,total] = await app.listResources(0, 30);
+    assert(list.length == 4, 'should have 4 items');
+    const [,,[path, w, index]] = list;
+    assert(path == 'p5', 'resource id should be right')
+    assert(w == 105, 'weight should be right')
+    assert(index == 2, `index should be right, ${index} vs 3 `)
   });
   it("check permission", async function () {
     const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
@@ -237,7 +256,7 @@ describe("ApiCoin", async function () {
       app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
     ).to.be.revertedWith(`Not permitted`);
 
-    await expect(app2.setResourceWeight(0, "p0", 10)).to.be.revertedWith(
+    await expect(app2.configResource({id:0, resourceId:"p0", weight:10, op:OP.ADD})).to.be.revertedWith(
       `not app owner`
     );
     // app2
