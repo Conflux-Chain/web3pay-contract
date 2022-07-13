@@ -8,6 +8,8 @@
   "scripts": {
     "compile": "hardhat compile",
     "docgen-sol-doesn't work": "hardhat docgen",
+    "test-deploy": "hardhat --network test run scripts/deploy.ts",
+    "test-accounts": "hardhat --network test accounts",
     "doc": "solidity-docgen --solc-module solc-0-8",
     "test-api-coin": "hardhat test ./test/apiCoin.ts"
   },
