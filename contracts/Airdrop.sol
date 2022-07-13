@@ -10,12 +10,12 @@ contract Airdrop is APPCoin {
     event Spend(address indexed from, uint256 amount);
     event Drop(address indexed to, uint256 amount, string reason);
 
-    function airdrop(address to, uint256 amount, string memory reason) public {
+    function airdrop(address to, uint256 amount, string memory reason) public onlyAppOwner {
         drops[to] += amount;
         emit Drop(to, amount, reason);
     }
 
-    function airdropBatch(address[] memory to, uint256[] memory amount, string[] memory reason) public {
+    function airdropBatch(address[] memory to, uint256[] memory amount, string[] memory reason) public onlyAppOwner {
         require(to.length == amount.length, "invalid length of amount");
         require(to.length == reason.length, "invalid length of reason");
         for(uint i=0; i<to.length; i++) {
@@ -43,7 +43,7 @@ contract Airdrop is APPCoin {
         }
 
         if (spendDrop > 0) {
-            drops[account] = dropBalance - amount;
+            drops[account] = dropBalance - spendDrop;
             emit Spend(account, spendDrop);
         }
         // even `spendSuper` is zero, this must be executed.

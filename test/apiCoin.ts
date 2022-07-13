@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import {APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
+import {Airdrop, APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
 import { ContractReceipt } from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import assert from "assert";
@@ -38,10 +38,10 @@ function dumpEvent(receipt: ContractReceipt) {
   );
   return receipt;
 }
-async function deployAndDeposit(signer2:SignerWithAddress) {
+async function deployAndDeposit(signer2:SignerWithAddress, appTemplate="APPCoin") {
   const acc2 = await signer2.getAddress();
   const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
-  const app = (await deployApp("APPCoin", [
+  const app = (await deployApp(appTemplate, [
     api.address,
     acc2, // set acc2 as app owner
     "APP 1",
@@ -310,6 +310,35 @@ describe("ApiCoin", async function () {
         .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
         .withArgs(app.address, acc1, parseEther("0.8")) // refund api code
     expect(1).eq(1);
+  });
+  it("airdrop", async () => {
+    const {api, app, app2} = await deployAndDeposit(signer2, "Airdrop");
+    const badApp2 = await app2.connect(signer3) as any as Airdrop
+    await expect(badApp2.airdrop(acc1, parseEther('1'), "fail")).to.be.revertedWith(`not app owner`)
+    const airdrop = app2 as any as Airdrop
+    const receipt = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']).then(tx=>tx.wait());
+    expect(receipt).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)
+        .withArgs(acc1, parseEther("10"), 'test')
+    let [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
+    assert( total.eq(parseEther("11")), `should be 11 app coin, ${total}`)
+    assert( drop.eq(parseEther("10")), `should be 10 airdrop, ${drop}`)
+    await expect(app2.charge(acc1, parseEther("1"), Buffer.from("sub 1 left 1 + 9")))
+        .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("1"))
+        .emit(airdrop, airdrop.interface.events["Transfer(address,address,uint256)"].name)
+        .withArgs(acc1, ethers.constants.AddressZero, parseEther("0"));
+    [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
+    assert( total.eq(parseEther("10")), `should be 10 app coin, ${total}`)
+    assert( drop.eq(parseEther("9")), `should be 9 airdrop, ${drop}`)
+    assert(parseEther("1").eq(await airdrop.balanceOf(acc1)), "should be 1 origin app coin")
+
+    await expect(app2.charge(acc1, parseEther("9.5"), Buffer.from("sub 9.5 left 0.5 + 0")))
+        .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("9"))
+        .emit(airdrop, airdrop.interface.events["Transfer(address,address,uint256)"].name)
+        .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.5"));
+
+    [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
+    assert( total.eq(parseEther("0.5")), `should be 0.5 app coin, ${total}`)
+    assert( drop.eq(parseEther("0")), `should be 0 airdrop, ${drop}`)
   });
   it("track paid app", async () => {
     const {api, app, app2} = await deployAndDeposit(signer1);
