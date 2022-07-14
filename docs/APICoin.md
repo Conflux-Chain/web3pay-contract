@@ -26,6 +26,12 @@ the `price/weight` of consumed API.
 
 Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
 
+### `listPaidApp(address user_, uint256 offset, uint256 limit) → address[] apps, uint256 total` (public)
+
+
+
+
+
 ### `refund(uint256 amount)` (public)
 
 
@@ -38,7 +44,7 @@ Used by anyone who holds API coin to exchange CFX back.
 
 
 
-### `initialize()` (public)
+### `initialize(string name_, string symbol_, address[] defaultOperators)` (public)
 
 
 

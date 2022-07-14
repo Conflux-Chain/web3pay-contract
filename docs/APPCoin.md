@@ -72,25 +72,7 @@ Used by an API consumer to send a withdraw request, API key related to the calle
 
 After some time, user can force withdraw his funds anyway.
 
-### `setResourceWeightBatch(uint32[] indexArr, string[] resourceIdArr, uint256[] weightArr)` (public)
-
-
-
-
-
-### `setResourceWeight(uint32 index, string resourceId, uint256 weight)` (public)
-
-
-
-
-
 ### `setForceWithdrawAfterBlock(uint256 diff)` (public)
-
-
-
-
-
-### `listResources(uint32 offset, uint32 limit) → struct APPCoin.WeightEntry[]` (public)
 
 
 
@@ -98,7 +80,7 @@ After some time, user can force withdraw his funds anyway.
 
 ### `initOwner(address owner_)` (public)
 
-
+ Called immediately after constructing through Controller contract.
 
 
 
@@ -120,8 +102,14 @@ After some time, user can force withdraw his funds anyway.
 
 
 
+### `_authorizeAppConfig()` (internal)
 
-### `ResourceChanged(uint32 index)`
+
+
+
+
+### `balanceOfWithAirdrop(address owner) → uint256 total, uint256 airdrop` (public)
+
 
 
 
@@ -138,15 +126,6 @@ After some time, user can force withdraw his funds anyway.
 
 
 
-
-
-### `WeightEntry`
-
-
-string name
-
-
-uint256 weight
 
 
 
