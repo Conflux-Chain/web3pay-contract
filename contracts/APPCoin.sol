@@ -32,8 +32,17 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
     }
     // frozen; value 1 means frozen by manager;
     mapping(address=>uint256) public frozenMap;
+    /** Total charged amount of each user.*/
+    mapping(address=>uint256) public chargedMapping;
+    /** Record all user who had been charged.*/
+    address[] public users;
+    struct UserCharged{
+        address user;
+        uint256 amount;
+    }
     event Frozen(address indexed addr);
-    uint256 public forceWithdrawAfterBlock;
+    /** Gap of seconds between withdrawRequest and forceWithdraw. */
+    uint256 public forceWithdrawDelay;
     event Withdraw(address account, uint256 amount);
     uint256 public totalCharged;
     uint256 public totalTakenProfit;
@@ -78,6 +87,11 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
     function charge(address account, uint256 amount, bytes memory data) public virtual onlyAppOwner whenNotPaused{
         _burn(account, amount, "", data);
         totalCharged += amount;
+        if (chargedMapping[account] == 0 && amount > 0) {
+            // record this account at the first time of charging.
+            users.push(account);
+        }
+        chargedMapping[account] += amount;
         if (frozenMap[account] > 1) {
             // refund
             uint256 appCoinLeft = balanceOf(account);
@@ -108,7 +122,7 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
     function forceWithdraw() public whenNotPaused {
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
-        require(block.number - frozenMap[msg.sender] > forceWithdrawAfterBlock, 'Waiting time');
+        require(block.number - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
         uint256 appCoinLeft = balanceOf(msg.sender);
         _burn(msg.sender, appCoinLeft, "force withdraw", "");
         IERC777(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
@@ -116,11 +130,23 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
         emit Withdraw(msg.sender, appCoinLeft);
     }
     // -------- app owner operation -----------
-    function setForceWithdrawAfterBlock(uint256 diff) public onlyAppOwner whenNotPaused{
-        forceWithdrawAfterBlock = diff;
+    function setForceWithdrawDelay(uint256 delay) public onlyAppOwner whenNotPaused{
+        require(delay <= 3600 * 3, 'delay exceeds 3 hours');
+        forceWithdrawDelay = delay;
     }
     // ------------ public -------------
-
+    function listUser(uint256 offset, uint256 limit) public view returns (UserCharged[] memory, uint256 total){
+        require(offset <= users.length, 'invalid offset');
+        if (offset + limit >= users.length) {
+            limit = users.length - offset;
+        }
+        UserCharged [] memory arr = new UserCharged[](limit);
+        for(uint i=0; i<limit; i++) {
+            arr[i] = UserCharged(users[offset], chargedMapping[users[offset]]);
+            offset += 1;
+        }
+        return (arr, users.length);
+    }
     // -------------------------open zeppelin----------------------------
     constructor()
         ERC777("", "", new address[](0)) {
@@ -140,7 +166,7 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
         _symbol = symbol_;
         apiCoin = apiCoin_;
         appOwner = appOwner_;
-        forceWithdrawAfterBlock = 10_000;
+        forceWithdrawDelay = 3600;
         nextConfigId = 1; // starts from 1, not zero
         ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
         _configResource(request);

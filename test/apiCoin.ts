@@ -135,7 +135,7 @@ describe("Controller", async function () {
 describe("ApiCoin", async function () {
   const signerArr = await ethers.getSigners();
   const [signer1, signer2, signer3] = signerArr;
-  const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
+  const [acc1, acc2, acc3] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
     const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
     const app = (await deployApp("APPCoin", [
@@ -289,12 +289,30 @@ describe("ApiCoin", async function () {
     ).to.be.revertedWith(`Waiting time`);
 
     // should transfer api coin from App to acc1
-    await app.setForceWithdrawAfterBlock(0).then((res) => res.wait());
+    await app.setForceWithdrawDelay(0).then((res) => res.wait());
     expect(await app.forceWithdraw().then((res) => res.wait()))
       .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(app.address, acc1, parseEther("1"));
     expect(await app.balanceOf(acc1)).eq(0);
 
+  });
+  it("track charged users", async () => {
+    const {api, app:appOwnerAcc2, app2:appSigner1} = await deployAndDeposit(signer2);
+    await Promise.all([signer2, signer3].map(s=>{
+      return api.connect(s).depositToApp(appOwnerAcc2.address, {value: parseEther("1")}).then(tx=>tx.wait())
+    }))
+    await appOwnerAcc2.charge(acc1, 1, Buffer.from("")).then(tx=>tx.wait())
+    await Promise.all([acc1, acc2, acc3].map(acc=>appOwnerAcc2.charge(acc, 1, Buffer.from("")).then(tx=>tx.wait())))
+    await Promise.all([acc1, acc2, acc3].map(acc=>appOwnerAcc2.charge(acc, 1, Buffer.from("")).then(tx=>tx.wait())))
+    const [users, total] = await appOwnerAcc2.listUser(0, 10);
+    assert(total.eq(3), 'should be 3 users')
+    assert(users[0][0] == acc1, `user 0 should be ${acc1}, actual ${users[0][0]}`)
+    assert(users[0][1].eq(3), `user 0 should have spent 3 actual ${formatEther(users[0][1])}`)
+    assert(users[1][1].eq(2), `user 1 should have spent 2 actual ${(users[0][1])}`)
+    assert(users[2][1].eq(2), `user 2 should have spent 2 actual ${(users[0][1])}`)
+    assert(users[1][0] == acc2 || users[1][0] == acc3, 'user 1 should be acc2 or acc3')
+    assert(users[2][0] == acc2 || users[2][0] == acc3, 'user 2 should be acc2 or acc3')
+    assert(users[1][0] !== users[2][0], 'user 1 should not be user 2')
   });
   it("charge and auto refund", async () => {
     const {api, app, app2} = await deployAndDeposit(signer1);
