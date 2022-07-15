@@ -47,6 +47,12 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
     uint256 public totalCharged;
     uint256 public totalTakenProfit;
 
+    struct ChargeRequest {
+        address account;
+        uint256 amount;
+        bytes data;
+    }
+
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external whenNotPaused {
         require(msg.sender == apiCoin, 'ApiCoin Required');
@@ -82,6 +88,12 @@ contract APPCoin is ERC777, AppConfig, Pausable, Ownable, IERC777Recipient {
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
         IERC777(apiCoin).send(to, amount, "takeProfit");
+    }
+    function chargeBatch(ChargeRequest[] memory requestArray) public onlyAppOwner whenNotPaused {
+        for(uint i=0; i<requestArray.length; i++) {
+            ChargeRequest memory request = requestArray[i];
+            charge(request.account, request.amount, request.data);
+        }
     }
     /** @dev Charge fee*/
     function charge(address account, uint256 amount, bytes memory data) public virtual onlyAppOwner whenNotPaused{

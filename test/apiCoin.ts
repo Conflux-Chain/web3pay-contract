@@ -302,8 +302,15 @@ describe("ApiCoin", async function () {
       return api.connect(s).depositToApp(appOwnerAcc2.address, {value: parseEther("1")}).then(tx=>tx.wait())
     }))
     await appOwnerAcc2.charge(acc1, 1, Buffer.from("")).then(tx=>tx.wait())
-    await Promise.all([acc1, acc2, acc3].map(acc=>appOwnerAcc2.charge(acc, 1, Buffer.from("")).then(tx=>tx.wait())))
-    await Promise.all([acc1, acc2, acc3].map(acc=>appOwnerAcc2.charge(acc, 1, Buffer.from("")).then(tx=>tx.wait())))
+    await appOwnerAcc2.chargeBatch([
+      {account: acc1, amount: 1, data: Buffer.from("")},
+      {account: acc2, amount: 1, data: Buffer.from("")},
+      {account: acc3, amount: 1, data: Buffer.from("")},
+
+      {account: acc1, amount: 1, data: Buffer.from("")},
+      {account: acc2, amount: 1, data: Buffer.from("")},
+      {account: acc3, amount: 1, data: Buffer.from("")},
+    ]).then(tx=>tx.wait());
     const [users, total] = await appOwnerAcc2.listUser(0, 10);
     assert(total.eq(3), 'should be 3 users')
     assert(users[0][0] == acc1, `user 0 should be ${acc1}, actual ${users[0][0]}`)

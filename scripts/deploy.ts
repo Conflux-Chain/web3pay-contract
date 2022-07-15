@@ -32,7 +32,10 @@ async function main() {
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`).then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
   //
-  console.log(`app impl at ${await controller.appBase()}`)
+  let appBase = await controller.appBase();
+  const appImpl = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
+  console.log(`app base(UpgradeableBeacon) at ${appBase}`)
+  console.log(`app impl at ${await appImpl.implementation()}`)
 }
 async function attach(name:string, to:string) {
   const template = await ethers.getContractFactory(name);
