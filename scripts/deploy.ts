@@ -4,7 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
-import {APICoin, Controller, ERC1967Proxy} from "../typechain";
+import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
