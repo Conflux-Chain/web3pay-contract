@@ -1,4 +1,4 @@
-declare -a arr=("APPCoin" "APICoin" "Controller")
+declare -a arr=("APPCoin" "APICoin" "Controller", "TokenRouter")
 
 ## now loop through the above array
 for name in "${arr[@]}"

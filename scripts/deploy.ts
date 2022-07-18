@@ -37,10 +37,7 @@ async function main() {
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
   console.log(`app impl at ${await appImpl.implementation()}`)
 }
-async function attach(name:string, to:string) {
-  const template = await ethers.getContractFactory(name);
-  return template.attach(to)
-}
+
 async function deployProxy(name: string, args: any[]) {
   const template = await ethers.getContractFactory(name);
   const proxy = await upgrades.deployProxy(template, args);
@@ -48,26 +45,7 @@ async function deployProxy(name: string, args: any[]) {
   console.log(`deploy proxy ${name}, got ${contract.address}`);
   return contract;
 }
-async function deploy(name:string, args:any[]) {
-  // We get the contract to deploy
-  const Factory = await ethers.getContractFactory(name).catch(err=>{
-    console.log(`error`, err)
-  });
-  if (!Factory) {
-    return;
-  }
-  const deployer = await Factory.deploy(...args,
-  ).catch(err=>{
-    console.log(`error deploy.`, err)
-  });
-  if (!deployer) {
-    return;
-  }
-  const instance = await deployer.deployed();
 
-  console.log(name+" deployed to:", deployer.address);
-  return instance;
-}
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.

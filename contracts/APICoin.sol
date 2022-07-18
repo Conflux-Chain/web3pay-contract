@@ -32,13 +32,17 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
      * Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
      */
     function depositToApp(address appCoin) public payable whenNotPaused {
-        require(msg.value > 0, 'Zero value');
+        uint amount = msg.value;
+        require(amount > 0, 'Zero value');
         require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
-        _mint(msg.sender, msg.value, '','');
+        _mintAndSend(amount, appCoin);
+    }
+    function _mintAndSend(uint amount, address appCoin) internal {
+        _mint(msg.sender, amount, '','');
         if (userPaidAppMap[msg.sender][appCoin] > 0) {
-            userPaidAppMap[msg.sender][appCoin] += msg.value;
+            userPaidAppMap[msg.sender][appCoin] += amount;
         } else {
-            userPaidAppMap[msg.sender][appCoin] = msg.value;
+            userPaidAppMap[msg.sender][appCoin] = amount;
             userPaidAppArray[msg.sender].push(appCoin);
         }
         send(appCoin, msg.value, "");
@@ -61,8 +65,11 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     }
     /** @dev Used by anyone who holds API coin to exchange CFX back. */
     function refund(uint256 amount) public whenNotPaused {
-        super.burn(amount, "refund");
+        _burnInner(amount, "refund");
         payable(msg.sender).transfer(amount);
+    }
+    function _burnInner(uint amount, bytes memory data) internal {
+        super.burn(amount, data);
     }
     //----------------------- OpenZeppelin code --------------------------
     /// @custom:oz-upgrades-unsafe-allow constructor
