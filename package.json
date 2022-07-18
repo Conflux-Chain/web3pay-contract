@@ -12,7 +12,8 @@
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
     "test-accounts": "hardhat --network test accounts",
     "doc": "solidity-docgen --solc-module solc-0-8",
-    "test-api-coin": "hardhat test ./test/apiCoin.ts"
+    "test-api-coin": "hardhat test ./test/apiCoin.ts",
+    "test-token-router": "hardhat --network test run scripts/tokenRouter.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "~4.6.0",

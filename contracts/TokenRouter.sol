@@ -10,17 +10,33 @@ interface ISwap {
         address to,
         uint deadline
     ) external returns (uint[] memory amounts);
+
+    function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
+    external
+    payable
+    returns (uint[] memory amounts);
 }
 contract TokenRouter {
+    /** Token used for pricing. */
     address public immutable baseToken;
     constructor(address baseToken_) {
         baseToken = baseToken_;
     }
+    /** Deposit native value, that is CFX on conflux chain. */
+    function depositNativeValue(address swap, uint amountOut, address[] calldata path, address toApp, uint deadline) public payable {
+        require(path[path.length-1] == baseToken, 'invalid path');
+        uint balance0 = IERC20(baseToken).balanceOf(address(this));
+
+        uint[] memory amounts = ISwap(swap).swapETHForExactTokens(amountOut, path, address(this), deadline);
+        _checkSwapResultAndMint(amounts, balance0, toApp);
+    }
+    /** Deposit base token directly. */
     function depositBaseToken(uint amountIn, address toApp) public {
         //must approve to this first
         IERC20(baseToken).transferFrom(msg.sender, address(this), amountIn);
         _mintAndSend(amountIn, toApp);
     }
+    /** Deposit other token rather than base token, do an auto swapping. */
     function depositWithSwap(address swap,
         uint amountIn,
         uint amountOutMin,
@@ -33,6 +49,9 @@ contract TokenRouter {
         IERC20(path[0]).transferFrom(msg.sender, address(this), amountIn);
         IERC20(path[0]).approve(swap, amountIn);
         uint[] memory amounts = ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), deadline);
+        _checkSwapResultAndMint(amounts, balance0, toApp);
+    }
+    function _checkSwapResultAndMint(uint[] memory amounts, uint balance0, address toApp) internal {
         uint swapGain = amounts[amounts.length - 1];
         // check balance diff
         uint actualGain = IERC20(baseToken).balanceOf(address(this)) - balance0;
