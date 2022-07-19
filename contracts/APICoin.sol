@@ -33,6 +33,7 @@ contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgra
      * Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
      */
     function depositToApp(address appCoin) public payable whenNotPaused {
+        require(baseToken == address(0), "use token router instead");
         uint amount = msg.value;
         require(amount > 0, 'Zero value');
         _mintAndSend(amount, appCoin);
@@ -66,6 +67,7 @@ contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgra
     }
     /** @dev Used by anyone who holds API coin to exchange CFX back. */
     function refund(uint256 amount) public whenNotPaused {
+        require(baseToken == address(0), "use token router instead");
         _burnInner(amount, "refund");
         payable(msg.sender).transfer(amount);
     }
