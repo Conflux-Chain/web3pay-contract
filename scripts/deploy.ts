@@ -6,6 +6,7 @@
 import {ethers, upgrades} from "hardhat";
 import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
+import {attach, deploy, tokensNet71} from "./lib";
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -25,7 +26,7 @@ async function main() {
 
   const apiImpl = await deploy("APICoin", []) as APICoin
   const tmpApiProxy = await attach("APICoin", ethers.constants.AddressZero) as APICoin
-  const initReq = await tmpApiProxy.populateTransaction.initialize(`API ${dateStr}`, `API${dateStr}`, []);
+  const initReq = await tmpApiProxy.populateTransaction.initialize(`API ${dateStr}`, `API${dateStr}`, baseToken, []);
   // console.log(`constructor data`, initReq.data)
 
   const apiProxy = await deploy("ERC1967Proxy", [apiImpl.address, initReq.data]) as ERC1967Proxy
