@@ -1,5 +1,11 @@
 import {ethers} from "hardhat";
-
+export const tokensNet71 = {
+	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
+	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
+	btc: "0x54593e02c39aeff52b166bd036797d2b1478de8d", // fauct btc
+	wcfx: "0x2ed3dddae5b2f321af0806181fbfa6d049be47d8",
+	__router: "0x873789aaf553fd0b4252d0d2b72c6331c47aff2e", // swappi router
+}
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)

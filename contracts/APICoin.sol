@@ -47,7 +47,7 @@ contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgra
             userPaidAppMap[msg.sender][appCoin] = amount;
             userPaidAppArray[msg.sender].push(appCoin);
         }
-        send(appCoin, msg.value, "");
+        send(appCoin, amount, "");
     }
     function listPaidApp(address user_, uint offset, uint limit) public view returns (address[] memory apps, uint total) {
         address[] memory paidArray = userPaidAppArray[user_];

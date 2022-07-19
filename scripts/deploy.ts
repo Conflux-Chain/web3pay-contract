@@ -15,7 +15,10 @@ async function main() {
   // await hre.run('compile');
   const [signer] = await ethers.getSigners()
   const acc1 = signer.address
-  console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, await ethers.provider.getNetwork())
+  let network = await ethers.provider.getNetwork();
+  console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, network)
+  let tokens = tokensNet71;
+  let baseToken = tokens.usdt;
 
   const today = new Date()
   const dateStr = [today.getDate(), today.getHours(), today.getMinutes(), today.getSeconds()].map(n=>n.toString().padStart(2, '0')).join('')
@@ -31,11 +34,15 @@ async function main() {
   const controller = await deploy("Controller", [api!.address]) as Controller;
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`).then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
-  //
+
   let appBase = await controller.appBase();
   const appImpl = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
   console.log(`app impl at ${await appImpl.implementation()}`)
+
+  await verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("APPCoin", appImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
 }
 
 async function deployProxy(name: string, args: any[]) {
