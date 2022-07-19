@@ -15,6 +15,8 @@ interface ISwap {
     external
     payable
     returns (uint[] memory amounts);
+
+    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 contract TokenRouter {
     /** Token used for pricing. */
@@ -27,7 +29,7 @@ contract TokenRouter {
         require(path[path.length-1] == baseToken, 'invalid path');
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
 
-        uint[] memory amounts = ISwap(swap).swapETHForExactTokens(amountOut, path, address(this), deadline);
+        uint[] memory amounts = ISwap(swap).swapETHForExactTokens{value: msg.value}(amountOut, path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
     }
     /** Deposit base token directly. */

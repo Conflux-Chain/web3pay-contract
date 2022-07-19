@@ -34,10 +34,10 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     function depositToApp(address appCoin) public payable whenNotPaused {
         uint amount = msg.value;
         require(amount > 0, 'Zero value');
-        require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
         _mintAndSend(amount, appCoin);
     }
     function _mintAndSend(uint amount, address appCoin) internal {
+        require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
         _mint(msg.sender, amount, '','');
         if (userPaidAppMap[msg.sender][appCoin] > 0) {
             userPaidAppMap[msg.sender][appCoin] += amount;
