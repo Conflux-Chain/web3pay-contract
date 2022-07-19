@@ -20,8 +20,11 @@ interface ISwap {
 }
 contract TokenRouter {
     /** Token used for pricing. */
-    address public immutable baseToken;
-    constructor(address baseToken_) {
+    address public baseToken;
+    constructor() {
+    }
+    function initTokenRouter(address baseToken_) public {
+        require(baseToken == address(0), 'already initialized');
         baseToken = baseToken_;
     }
     /** Deposit native value, that is CFX on conflux chain. */
@@ -81,7 +84,7 @@ contract TokenRouter {
         IERC20(baseToken).approve(swap, amountIn);
         ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);
     }
-    function _burnInner(uint /*amount*/, bytes memory /*data*/) internal {
+    function _burnInner(uint /*amount*/, bytes memory /*data*/) internal virtual {
         // method stub
     }
 }

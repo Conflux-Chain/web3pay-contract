@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./IAPPCoin.sol";
+import "./TokenRouter.sol";
 /** @dev API coin is the currency in the whole payment service.
  *
  * For api consumer:
@@ -17,7 +18,7 @@ import "./IAPPCoin.sol";
  * - refund
  *
  */
-contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /** user address => appArray ever deposited to */
     mapping(address=>address[]) userPaidAppArray;
     /** user address => (app address=> total deposit amount) */
@@ -36,7 +37,7 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         require(amount > 0, 'Zero value');
         _mintAndSend(amount, appCoin);
     }
-    function _mintAndSend(uint amount, address appCoin) internal {
+    function _mintAndSend(uint amount, address appCoin) internal override {
         require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
         _mint(msg.sender, amount, '','');
         if (userPaidAppMap[msg.sender][appCoin] > 0) {
@@ -68,7 +69,7 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _burnInner(amount, "refund");
         payable(msg.sender).transfer(amount);
     }
-    function _burnInner(uint amount, bytes memory data) internal {
+    function _burnInner(uint amount, bytes memory data) internal override {
         super.burn(amount, data);
     }
     //----------------------- OpenZeppelin code --------------------------
@@ -77,11 +78,12 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _disableInitializers();
     }
 
-    function initialize(string memory name_, string memory symbol_, address[] calldata defaultOperators) initializer public {
+    function initialize(string memory name_, string memory symbol_, address baseToken, address[] calldata defaultOperators) initializer public {
         __ERC777_init(name_, symbol_, defaultOperators);
         __Pausable_init();
         __Ownable_init();
         __UUPSUpgradeable_init();
+        initTokenRouter(baseToken);
     }
 
     function pause() public onlyOwner {

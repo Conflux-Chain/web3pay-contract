@@ -31,8 +31,9 @@ async function swap(tokens: any, input:string, output:string, amountUnit: string
 }
 async function test(tokens: any) {
 	const baseToken = tokens.usdt;
-	// const myRouter = await deploy("TokenRouter", [baseToken]) as TokenRouter;
-	const myRouter = await ethers.getContractAt("TokenRouter", "0xBf242eC85B2F251821c9D92C05b2162EEF9C9E3C") as TokenRouter;
+	const myRouter = await deploy("TokenRouter", []) as TokenRouter;
+	await myRouter.initTokenRouter(baseToken).then(waitTx);
+	// const myRouter = await ethers.getContractAt("TokenRouter", "0xBf242eC85B2F251821c9D92C05b2162EEF9C9E3C") as TokenRouter;
 	const swapRouter = tokens.__router //
 	const path = [
 		tokens.btc, tokens.usdt

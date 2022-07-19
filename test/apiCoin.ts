@@ -8,6 +8,7 @@ const {
   utils: { formatEther, parseEther },
 } = ethers;
 enum OP {ADD,UPDATE,DELETE}
+let baseToken = ethers.constants.AddressZero
 async function attach(name:string, to:string) {
   const template = await ethers.getContractFactory(name);
   return template.attach(to)
@@ -40,7 +41,7 @@ function dumpEvent(receipt: ContractReceipt) {
 }
 async function deployAndDeposit(appOwner:SignerWithAddress, appTemplate="APPCoin") {
   const ownerAddr = await appOwner.getAddress();
-  const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
+  const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;
   const appWithOwnerSet = (await deployApp(appTemplate, [
     api.address,
     ownerAddr, // set app owner
@@ -58,7 +59,7 @@ describe("Controller", async function () {
   const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("createApp" , async function (){
-    const api = await deployProxy("APICoin", ["main coin", "mc", []]) as APICoin
+    const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
     const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
 
     const tx = await controller.createApp("CoinA", "CA").then(res=>res.wait())
@@ -93,7 +94,7 @@ describe("Controller", async function () {
     expect(total).eq(2)
   })
   it("upgrade api contract, UUPS", async function (){
-    const api = await deployProxy("APICoin", ["main coin", "mc", []]) as APICoin
+    const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
     const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1").then(tx=>tx.wait());
     const api1addr = api.address
@@ -137,7 +138,7 @@ describe("ApiCoin", async function () {
   const [signer1, signer2, signer3] = signerArr;
   const [acc1, acc2, acc3] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("Should deposit to app", async function () {
-    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
@@ -163,7 +164,7 @@ describe("ApiCoin", async function () {
     //
   });
   it("config resource weights", async function () {
-    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
@@ -221,7 +222,7 @@ describe("ApiCoin", async function () {
     assert(index == 2, `index should be right, ${index} vs 3 `)
   });
   it("check permission", async function () {
-    const api = (await deployProxy("APICoin", ["main coin", "mc", []])) as APICoin;
+    const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
