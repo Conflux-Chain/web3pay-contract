@@ -40,9 +40,6 @@ async function main() {
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
   console.log(`app impl at ${await appImpl.implementation()}`)
 
-  await verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
-  await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
-  await verifyContract("APPCoin", appImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
 }
 
 async function deployProxy(name: string, args: any[]) {
