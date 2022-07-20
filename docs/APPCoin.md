@@ -47,6 +47,12 @@ Freeze/Unfreeze an account.
 
 
 
+### `chargeBatch(struct APPCoin.ChargeRequest[] requestArray)` (public)
+
+
+
+
+
 ### `charge(address account, uint256 amount, bytes data)` (public)
 
 
@@ -72,7 +78,13 @@ Used by an API consumer to send a withdraw request, API key related to the calle
 
 After some time, user can force withdraw his funds anyway.
 
-### `setForceWithdrawAfterBlock(uint256 diff)` (public)
+### `setForceWithdrawDelay(uint256 delay)` (public)
+
+
+
+
+
+### `listUser(uint256 offset, uint256 limit) → struct APPCoin.UserCharged[], uint256 total` (public)
 
 
 
@@ -126,6 +138,27 @@ After some time, user can force withdraw his funds anyway.
 
 
 
+
+
+### `UserCharged`
+
+
+address user
+
+
+uint256 amount
+
+
+### `ChargeRequest`
+
+
+address account
+
+
+uint256 amount
+
+
+bytes data
 
 
 
