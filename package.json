@@ -6,12 +6,14 @@
   "author": "Kang <kangjianhu@conflux-chain.org>",
   "license": "MIT",
   "scripts": {
+    "setup": "ts-node ./scripts/setupERC777.ts",
     "compile": "hardhat compile",
     "docgen-sol-doesn't work": "hardhat docgen",
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
     "test-accounts": "hardhat --network test accounts",
     "doc": "solidity-docgen --solc-module solc-0-8",
-    "test-api-coin": "hardhat test ./test/apiCoin.ts"
+    "test-api-coin": "hardhat test ./test/apiCoin.ts",
+    "test-token-router": "hardhat --network test run scripts/tokenRouter.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "~4.6.0",
@@ -19,6 +21,7 @@
     "@openzeppelin/hardhat-upgrades": "~1.19.0",
     "hardhat": "^2.9.9",
     "hardhat-erc1820": "^0.1.0",
+    "js-conflux-sdk": "^2.1.4",
     "solidity-docgen": "~0.5.17"
   },
   "devDependencies": {

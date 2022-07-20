@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./IAPPCoin.sol";
+import "./TokenRouter.sol";
 /** @dev API coin is the currency in the whole payment service.
  *
  * For api consumer:
@@ -17,7 +18,7 @@ import "./IAPPCoin.sol";
  * - refund
  *
  */
-contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /** user address => appArray ever deposited to */
     mapping(address=>address[]) userPaidAppArray;
     /** user address => (app address=> total deposit amount) */
@@ -32,16 +33,21 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
      * Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
      */
     function depositToApp(address appCoin) public payable whenNotPaused {
-        require(msg.value > 0, 'Zero value');
+        require(baseToken == address(0), "use token router instead");
+        uint amount = msg.value;
+        require(amount > 0, 'Zero value');
+        _mintAndSend(amount, appCoin);
+    }
+    function _mintAndSend(uint amount, address appCoin) internal override {
         require(IAPPCoin(appCoin).apiCoin() == address(this), 'Invalid app');
-        _mint(msg.sender, msg.value, '','');
+        _mint(msg.sender, amount, '','');
         if (userPaidAppMap[msg.sender][appCoin] > 0) {
-            userPaidAppMap[msg.sender][appCoin] += msg.value;
+            userPaidAppMap[msg.sender][appCoin] += amount;
         } else {
-            userPaidAppMap[msg.sender][appCoin] = msg.value;
+            userPaidAppMap[msg.sender][appCoin] = amount;
             userPaidAppArray[msg.sender].push(appCoin);
         }
-        send(appCoin, msg.value, "");
+        send(appCoin, amount, "");
     }
     function listPaidApp(address user_, uint offset, uint limit) public view returns (address[] memory apps, uint total) {
         address[] memory paidArray = userPaidAppArray[user_];
@@ -61,8 +67,12 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
     }
     /** @dev Used by anyone who holds API coin to exchange CFX back. */
     function refund(uint256 amount) public whenNotPaused {
-        super.burn(amount, "refund");
+        require(baseToken == address(0), "use token router instead");
+        _burnInner(amount, "refund");
         payable(msg.sender).transfer(amount);
+    }
+    function _burnInner(uint amount, bytes memory data) internal override {
+        super.burn(amount, data);
     }
     //----------------------- OpenZeppelin code --------------------------
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -70,11 +80,12 @@ contract APICoin is Initializable, ERC777Upgradeable, PausableUpgradeable, Ownab
         _disableInitializers();
     }
 
-    function initialize(string memory name_, string memory symbol_, address[] calldata defaultOperators) initializer public {
+    function initialize(string memory name_, string memory symbol_, address baseToken, address[] calldata defaultOperators) initializer public {
         __ERC777_init(name_, symbol_, defaultOperators);
         __Pausable_init();
         __Ownable_init();
         __UUPSUpgradeable_init();
+        initTokenRouter(baseToken);
     }
 
     function pause() public onlyOwner {
