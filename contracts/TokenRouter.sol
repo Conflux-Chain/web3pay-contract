@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
 interface ISwap {
     function swapExactTokensForTokens(
         uint amountIn,
@@ -11,6 +12,10 @@ interface ISwap {
         uint deadline
     ) external returns (uint[] memory amounts);
 
+    /**
+     * An important difference here: the cost of native value will be dynamically calculated through function `getAmountsIn`.
+     * Exceeded value will be send back to the caller.
+     */
     function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
     external
     payable
@@ -18,16 +23,35 @@ interface ISwap {
 
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
+
+/**
+ * Usage of this contract: supporting depositing kinds of ERC20 tokens.
+ * It could be initialized with a `baseToken`, also called anchor token, pricing token.
+ * User could deposit `baseToken` directly, or, deposit other tokens , there will be a automatically `swapping`.
+ * Both way need `approve` token to this contract first.
+ */
 contract TokenRouter {
     /** Token used for pricing. */
     address public baseToken;
     constructor() {
     }
+    /** Set baseToken. Cannot put it in constructor because subcontract may be proxyable. */
     function initTokenRouter(address baseToken_) public {
         require(baseToken == address(0), 'already initialized');
         baseToken = baseToken_;
     }
-    /** Deposit native value, that is CFX on conflux chain. */
+    /**
+     * Deposit native value, that is CFX on conflux chain.
+     * When depositing from Conflux Core space, the value sent must equal to amount needed by the swapping,
+     * otherwise the transaction will fail, because left value can not be send back.
+     *
+     * Parameters:
+     * - swap: Swapping contract address
+     * - amountOut: Desired amount of `baseToken`
+     * - path: Swapping path used by swapping contract. Generally, it's the address of [WCFX, baseToken]
+     * - toApp: deposit for which app
+     * - deadline: timestamp ( in seconds ) before which this transaction should be executed.
+     */
     function depositNativeValue(address swap, uint amountOut, address[] calldata path, address toApp, uint deadline) public payable {
         require(path[path.length-1] == baseToken, 'invalid path');
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
@@ -35,13 +59,15 @@ contract TokenRouter {
         uint[] memory amounts = ISwap(swap).swapETHForExactTokens{value: msg.value}(amountOut, path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
     }
-    /** Deposit base token directly. */
+
+    /** Deposit base token directly. Must do approving first. */
     function depositBaseToken(uint amountIn, address toApp) public {
         //must approve to this first
         IERC20(baseToken).transferFrom(msg.sender, address(this), amountIn);
         _mintAndSend(amountIn, toApp);
     }
-    /** Deposit other token rather than base token, do an auto swapping. */
+
+    /** Deposit other token rather than base token, do an auto swapping. Must do approving first. */
     function depositWithSwap(address swap,
         uint amountIn,
         uint amountOutMin,
@@ -50,12 +76,18 @@ contract TokenRouter {
         uint deadline) public {
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
 
+        // swapping should end with baseToken
         require(path[path.length-1] == baseToken, 'invalid path');
         IERC20(path[0]).transferFrom(msg.sender, address(this), amountIn);
         IERC20(path[0]).approve(swap, amountIn);
         uint[] memory amounts = ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
     }
+
+    /** Make sure this contract receives exact amount of baseToken,
+     *  and then mint that amount of token represented by this contract,
+     *  and then send minted tokens from msg.sender to toApp.
+     */
     function _checkSwapResultAndMint(uint[] memory amounts, uint balance0, address toApp) internal {
         uint swapGain = amounts[amounts.length - 1];
         // check balance diff
@@ -64,9 +96,23 @@ contract TokenRouter {
         // call API Coin deposit/_mint();
         _mintAndSend(actualGain, toApp);
     }
+
+    /** Subclass should implement this method. */
     function _mintAndSend(uint amount, address appCoin) internal virtual {
         // method stub
     }
+
+    /**
+     * Withdraw baseToken or other token, depends on the path passed in.
+     *
+     * Parameters:
+     * - swap: Swapping contract address
+     * - amountIn: amount of baseToken
+     * - amountOutMin: minimum amount of wanted output token
+     * - path: swapping path, could be [baseToken] or [baseToken, wantedToken]
+     * - to: who will receive the output tokens
+     * - deadline: timestamp ( in seconds ) before which this transaction should be executed.
+     */
     function withdraw(address swap,
         uint amountIn,
         uint amountOutMin,
@@ -84,6 +130,8 @@ contract TokenRouter {
         IERC20(baseToken).approve(swap, amountIn);
         ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);
     }
+
+    /** Subclass should implement this method. */
     function _burnInner(uint /*amount*/, bytes memory /*data*/) internal virtual {
         // method stub
     }

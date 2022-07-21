@@ -1,29 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
-
+/** Configuration functions for an App */
 abstract contract AppConfig {
-    // resources
     event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
     struct ConfigEntry {
         string resourceId;
         uint32 weight;
         uint32 index; // index in indexArray
     }
-    // auto-increment id, starts from 1
+    /** auto-increment id, starts from 1 */
     uint32 public nextConfigId;
-    // store, key is auto-generated id
+    /** store, key is auto-generated id */
     mapping(uint32=> ConfigEntry) public resourceConfigures;
-    // order of id. Deletion needs it.
+    /** order of id. Deletion needs it. */
     uint32[] public indexArray;
-    // resourceId => id
+    /** resourceId => id */
     mapping(string=>uint32) resources;
 
+    /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     enum OP {ADD,UPDATE,DELETE}
 
+    /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     struct ConfigRequest {
         uint32 id;
         string resourceId;
         uint32 weight;
+        /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
         OP op;
     }
 

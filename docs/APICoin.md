@@ -26,6 +26,12 @@ the `price/weight` of consumed API.
 
 Parameter `appCoin` is the settlement contract of the app, please contact API supplier to get it.
 
+### `_mintAndSend(uint256 amount, address appCoin)` (internal)
+
+
+
+
+
 ### `listPaidApp(address user_, uint256 offset, uint256 limit) → address[] apps, uint256 total` (public)
 
 
@@ -38,13 +44,19 @@ Parameter `appCoin` is the settlement contract of the app, please contact API su
 
 Used by anyone who holds API coin to exchange CFX back.
 
+### `_burnInner(uint256 amount, bytes data)` (internal)
+
+
+
+
+
 ### `constructor()` (public)
 
 
 
 
 
-### `initialize(string name_, string symbol_, address[] defaultOperators)` (public)
+### `initialize(string name_, string symbol_, address baseToken, address[] defaultOperators)` (public)
 
 
 

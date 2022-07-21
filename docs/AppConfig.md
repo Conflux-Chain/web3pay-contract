@@ -1,6 +1,6 @@
 ## `AppConfig`
 
-
+Configuration functions for an App
 
 
 
