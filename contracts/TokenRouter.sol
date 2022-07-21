@@ -42,8 +42,8 @@ contract TokenRouter {
     }
     /**
      * Deposit native value, that is CFX on conflux chain.
-     * When depositing from Conflux Core space, the value sent must equal to amount needed by the swapping,
-     * otherwise the transaction will fail, because left value can not be send back.
+     * When depositing from Conflux Core space, the value sent should equal to amount needed by the swapping,
+     * otherwise left value will stay at the mapped account in eSpace, and can be withdraw through CrossSpaceCall.
      *
      * Parameters:
      * - swap: Swapping contract address
@@ -56,8 +56,20 @@ contract TokenRouter {
         require(path[path.length-1] == baseToken, 'invalid path');
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
 
-        uint[] memory amounts = ISwap(swap).swapETHForExactTokens{value: msg.value}(amountOut, path, address(this), deadline);
+        // get exact cost
+        uint[] memory amountsIn = ISwap(swap).getAmountsIn(amountOut, path);
+        // send exact cost to swap
+        uint[] memory amounts = ISwap(swap).swapETHForExactTokens{value: amountsIn[0]}(amountOut, path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
+        uint dust = msg.value - amountsIn[0];
+        if (dust > 0) {
+            safeTransferETH(msg.sender, dust);
+        }
+    }
+
+    function safeTransferETH(address to, uint value) internal {
+        (bool success,) = to.call{value:value}(new bytes(0));
+        require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
     }
 
     /** Deposit base token directly. Must do approving first. */

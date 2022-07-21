@@ -4,14 +4,14 @@ export const tokensNet71 = {
 	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
 	btc: "0x54593e02c39aeff52b166bd036797d2b1478de8d", // fauct btc
 	wcfx: "0x2ed3dddae5b2f321af0806181fbfa6d049be47d8",
-	testApp: "0x0979193d54Bf5cD4D4958944C52Ac66DEeDE4F2A",
+	testApp: "0x04599b35466F23cDf7e28762E5216C6d5B4edDE5",
 	__router: "0x873789aaf553fd0b4252d0d2b72c6331c47aff2e", // swappi router
 }
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)
 }
-export function getDealine(diff: number = 1000) {
+export function getDeadline(diff: number = 1000) {
 	return Math.round(Date.now()/1000 ) + diff
 }
 export function waitTx(tx:any) {
