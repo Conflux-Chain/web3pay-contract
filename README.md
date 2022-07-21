@@ -1,6 +1,8 @@
 # web3pay-contract
 Smart contracts for Web3 payment service.
 
+[Contract Docs](./docs/README.md)
+
 Quick start:
 
 ```shell 
@@ -14,7 +16,7 @@ Deploy:
 
 create .env file with these variables configured:
 - TEST_RPC_URL: blockchain rpc endpoint.
-- PRIVATE_KEY: account to deploy.
+- PRIVATE_KEY: deployer's private key.
 
 run 
 ```shell
@@ -23,4 +25,4 @@ run
 yarn test-deploy
 ```
 
-Make sure account has enough balance.
+Make sure deployer account has enough balance.
