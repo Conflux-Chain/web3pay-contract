@@ -1,0 +1,9 @@
+/node_modules/
+/.idea/
+/.local/
+/.openzeppelin/
+/cache/
+/artifacts/
+/.env
+/typechain/
+/flatten/

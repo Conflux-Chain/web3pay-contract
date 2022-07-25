@@ -3,7 +3,7 @@
  */
 import {Conflux, Drip, format} from "js-conflux-sdk"
 const addressUtil = require('js-conflux-sdk/src/util/address');
-import {getDealine, tokensNet71} from "./lib";
+import {getDeadline, tokensNet71} from "./lib";
 import {ethers} from "hardhat";
 import {formatEther, parseEther} from "ethers/lib/utils";
 import * as dotenv from "dotenv";
@@ -32,11 +32,11 @@ async function main() {
 	const decoded = ethers.utils.defaultAbiCoder.decode(['uint256[]'], result)[0].map(formatEther)
 	console.log(`staticCallEVM , cost cfx `, decoded)
 	// function depositNativeValue(address swap, uint amountOut, address[] calldata path, address toApp, uint deadline) public payable {
-	const {data} = await api.populateTransaction.depositNativeValue(__router, parseEther("0.003"), [wcfx, usdt], testApp, getDealine())
-	const {transactionHash} = await crossCall.callEVM('0x825DC496263263E2Fd48310f2dB80c85DcA903cA', data).sendTransaction({
+	const {data} = await api.populateTransaction.depositNativeValue(__router, parseEther("0.003"), [wcfx, usdt], testApp, getDeadline())
+	const {transactionHash} = await crossCall.callEVM('0xc1bedb2d272272f367ca9f083043278cade7c179', data).sendTransaction({
 		from: acc1,
 		// value: parseEther(decoded[0])
-		value: parseEther("0.01")
+		value: parseEther("1")
 	}).executed();
 	console.log(`depositNativeValue done.`, transactionHash)
 }
