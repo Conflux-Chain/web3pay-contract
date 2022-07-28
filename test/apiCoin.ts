@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import {Airdrop, APICoin, ApiV2, APPCoin, AppV2, Controller, UpgradeableBeacon} from "../typechain";
-import { ContractReceipt } from "ethers";
+import {ContractReceipt, ContractTransaction} from "ethers";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import assert from "assert";
 
@@ -63,10 +63,10 @@ describe("Controller", async function () {
     const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
     const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
 
-    const tx = await controller.createApp("CoinA", "CA", "app description").then(res=>res.wait())
-    expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
+    const tx = controller.createApp("CoinA", "CA", "app description")
+    await expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
     // @ts-ignore
-    const createdAppAddr = tx.events?.filter(e=>e.event === controller.interface.events["APP_CREATED(address,address)"].name)
+    const createdAppAddr = (await (await tx).wait()).events?.filter(e=>e.event === controller.interface.events["APP_CREATED(address,address)"].name)
         [0].args[0]
     //
     const app = await attach("APPCoin", createdAppAddr).then(res=>res as APPCoin)
@@ -151,14 +151,13 @@ describe("ApiCoin", async function () {
     //
     const spend = parseEther("1.23");
     const account = await api.signer.getAddress();
-    expect(
-      await api
+    let tx_:ContractTransaction
+    await expect(
+      api
         .depositToApp(app.address, { value: spend })
-        .then((res) => res.wait())
-        .then(dumpEvent)
     )
-      .emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
-      .withArgs(acc1, acc1, ethers.constants.AddressZero, account, spend);
+        .emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
+      .withArgs(api.address, ethers.constants.AddressZero, account, 0, spend);
     await app.balanceOf(account, 0).then((res) => {
       console.log(`balance of app, user ${account}`, formatEther(res));
     });
@@ -283,8 +282,8 @@ describe("ApiCoin", async function () {
     await expect(
       app.forceWithdraw().then((res) => res.wait())
     ).to.be.revertedWith(`Withdraw request first`);
-    expect(await app.withdrawRequest().then((res) => res.wait()))
-      .to.be.emit(app, app.interface.events["Frozen(address)"].name)
+    await expect(app.withdrawRequest())
+      .emit(app, app.interface.events["Frozen(address)"].name)
       .withArgs(acc1);
     await expect(
       app.forceWithdraw().then((res) => res.wait())
@@ -292,7 +291,7 @@ describe("ApiCoin", async function () {
 
     // should transfer api coin from App to acc1
     await app.setForceWithdrawDelay(0).then((res) => res.wait());
-    expect(await app.forceWithdraw().then((res) => res.wait()))
+    await expect(app.forceWithdraw())
       .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(app.address, acc1, parseEther("1"));
     expect(await app.balanceOf(acc1, 0)).eq(0);
@@ -332,7 +331,7 @@ describe("ApiCoin", async function () {
     await expect(app.withdrawRequest()).emit(app, app.interface.events["Frozen(address)"].name)
         .withArgs(acc1)
     await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
-        .to.be.emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
+        .emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
         .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.8"))// burn
         .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
         .withArgs(app.address, acc1, parseEther("0.8")) // refund api code
@@ -343,8 +342,8 @@ describe("ApiCoin", async function () {
     const badApp2 = app2 as any as Airdrop
     await expect(badApp2.airdrop(acc1, parseEther('1'), "fail")).to.be.revertedWith(`not app owner`)
     const airdrop = app as any as Airdrop
-    const receipt = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']).then(tx=>tx.wait());
-    expect(receipt).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)
+    const tx = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']);
+    await expect(tx).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)
         .withArgs(acc1, parseEther("10"), 'test')
     let [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
     assert( total.eq(parseEther("11")), `should be 11 app coin, ${total}`)
@@ -370,8 +369,8 @@ describe("ApiCoin", async function () {
   it("app as nft", async () => {
     const {api, app, app2} = await deployAndDeposit(signer1);
     const prefix = "data:application/json;base64,"
-    const metaStr = await app.uri(0).then(str=>Buffer.from(str.substring(prefix.length)).toString("UTF8"));
-    const metaStrOfConfig = await app.uri(1).then(str=>Buffer.from(str.substring(prefix.length)).toString());
+    const metaStr = await app.uri(0).then(str=>Buffer.from(str.substring(prefix.length), "base64").toString("UTF8"));
+    const metaStrOfConfig = await app.uri(1).then(str=>Buffer.from(str.substring(prefix.length), "base64").toString());
     console.log(`meta info`, metaStr, metaStrOfConfig)
     JSON.parse(metaStr)
     JSON.parse(metaStrOfConfig)
