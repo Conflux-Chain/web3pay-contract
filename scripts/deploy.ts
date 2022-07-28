@@ -37,10 +37,16 @@ async function main() {
   console.log(`create new app ${await controller.appMapping(0)}`)
 
   let appBase = await controller.appBase();
-  const appImpl = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
+  const appBeacon = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
-  console.log(`app impl at ${await appImpl.implementation()}`)
+  let appImplStub = await appBeacon.implementation();
+  console.log(`app impl at ${appImplStub}`)
 
+  console.log(`wait before verifying...`)
+  await sleep(10_000)
+  await verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Airdrop", appImplStub).catch(err=>console.log(`verify contract fail ${err}`))
 }
 
 async function deployProxy(name: string, args: any[]) {

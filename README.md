@@ -15,6 +15,7 @@ yarn test-api-coin
 Deploy:
 
 create .env file with these variables configured:
+- TEST_SCAN_URL: scan url for contract verifying.
 - TEST_RPC_URL: blockchain rpc endpoint.
 - PRIVATE_KEY: deployer's private key.
 

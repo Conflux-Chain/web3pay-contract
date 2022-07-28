@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./APPCoin.sol";
 import "hardhat/console.sol";
 import "./Airdrop.sol";
 /**
@@ -31,7 +30,7 @@ contract Controller is Ownable {
     mapping(address=>AppInfo[]) creatorAppTrack;
 
     constructor (address api_){
-        APPCoin appImpl = new APPCoin();
+        Airdrop appImpl = new Airdrop();
         UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
         appUpgradeableBeacon.transferOwnership(msg.sender);
         appBase = address(appUpgradeableBeacon);

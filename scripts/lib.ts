@@ -17,6 +17,9 @@ export function getDeadline(diff: number = 1000) {
 export function waitTx(tx:any) {
 	return tx.wait();
 }
+export async function sleep(ms:number) {
+	return new Promise(r=>setTimeout(r, ms))
+}
 export async function deploy(name:string, args:any[]) {
 	// We get the contract to deploy
 	const Factory = await ethers.getContractFactory(name).catch(err=>{
