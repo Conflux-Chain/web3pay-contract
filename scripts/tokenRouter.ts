@@ -28,8 +28,8 @@ async function test(tokens: any) {
 	const baseToken = tokens.usdt;
 	// const myRouter = await deploy("TokenRouter", []) as TokenRouter;
 	// await myRouter.initTokenRouter(baseToken).then(waitTx);
-	const myRouter = await ethers.getContractAt("TokenRouter", "0xc1bedb2d272272f367ca9f083043278cade7c179") as TokenRouter;
-	const testApp = '0x04599b35466F23cDf7e28762E5216C6d5B4edDE5';
+	const myRouter = await ethers.getContractAt("TokenRouter", "0xbb0086bddb7816696922a1f711ba68a9e4918767") as TokenRouter;
+	const testApp = '0xe15b9df25e55185b0faba9804cc3026879e5ef05';
 	const swapRouter = tokens.__router //
 	const path = [
 		tokens.btc, baseToken,

@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./APPCoin.sol";
 import "hardhat/console.sol";
+import "./Airdrop.sol";
 /**
 * @title Controller
 * @dev DApp developers can register their app through this controller.
@@ -30,7 +30,7 @@ contract Controller is Ownable {
     mapping(address=>AppInfo[]) creatorAppTrack;
 
     constructor (address api_){
-        APPCoin appImpl = new APPCoin();
+        Airdrop appImpl = new Airdrop();
         UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
         appUpgradeableBeacon.transferOwnership(msg.sender);
         appBase = address(appUpgradeableBeacon);
@@ -41,10 +41,10 @@ contract Controller is Ownable {
     * An ERC777 contract will be deployed, which then will be used as a settlement contract between API consumer and API supplier.
     * Caller's address will be used as the `appOwner` of the contract.
     */
-    function createApp(string memory name_, string memory symbol_) public {
-        APPCoin app = APPCoin((address(new BeaconProxy(address(appBase), ""))));
+    function createApp(string memory name_, string memory symbol_, string memory description_) public {
+        Airdrop app = Airdrop((address(new BeaconProxy(address(appBase), ""))));
         app.initOwner(address(this));
-        app.init(api, msg.sender, name_, symbol_);
+        app.init(api, msg.sender, name_, symbol_, description_);
         app.transferOwnership(owner());
         appMapping[nextId] = address(app);
         nextId += 1;

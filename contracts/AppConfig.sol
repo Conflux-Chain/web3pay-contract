@@ -8,6 +8,8 @@ abstract contract AppConfig {
         uint32 weight;
         uint32 index; // index in indexArray
     }
+    /* token id for fungible token (ERC20, APP Coin) */
+    uint256 public constant FT_ID = 0;
     /** auto-increment id, starts from 1 */
     uint32 public nextConfigId;
     /** store, key is auto-generated id */
@@ -62,12 +64,18 @@ abstract contract AppConfig {
 
             resources[resourceId] = id;
             resourceConfigures[id] = ConfigEntry(resourceId, weight, uint32(indexArray.length));
+            _mintConfig(address(this), id, weight, "add config");
 
             // track index.
             indexArray.push(id);
         } else if (op == OP.UPDATE) {
             require(id > 0, 'invalid id');
             require(resources[resourceId] == id, 'id/resourceId mismatch');
+            if (weight >= resourceConfigures[id].weight) {
+                _mintConfig(address(this), FT_ID, weight - resourceConfigures[id].weight, "update config");
+            } else {
+                _burnConfig(address(this), FT_ID, resourceConfigures[id].weight - weight);
+            }
             resourceConfigures[id].weight = weight;
         } else if (op == OP.DELETE) {
             require(resources[resourceId] == id, 'resource id mismatch');
@@ -83,6 +91,7 @@ abstract contract AppConfig {
                 // update index for that entry
                 resourceConfigures[lastIdValue].index = indexInArray;
             }
+            _burnConfig(address(this), FT_ID, resourceConfigures[id].weight);
             delete resources[resourceId];
             delete resourceConfigures[id];
         }
@@ -102,5 +111,19 @@ abstract contract AppConfig {
             offset ++;
         }
         return (slice, total);
+    }
+
+    function _mintConfig(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal virtual {
+    }
+    function _burnConfig(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) internal virtual {
     }
 }

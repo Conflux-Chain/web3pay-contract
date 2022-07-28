@@ -6,7 +6,8 @@
 import {ethers, upgrades} from "hardhat";
 import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
-import {attach, deploy, tokensNet71} from "./lib";
+import {verifyContract} from "./verify-scan";
+import {attach, deploy, sleep, tokensNet71} from "./lib";
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -33,14 +34,20 @@ async function main() {
   const api = await attach("APICoin", apiProxy.address) as APICoin
 
   const controller = await deploy("Controller", [api!.address]) as Controller;
-  await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`).then(tx=>tx.wait())
+  await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com").then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
 
   let appBase = await controller.appBase();
-  const appImpl = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
+  const appBeacon = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
-  console.log(`app impl at ${await appImpl.implementation()}`)
+  let appImplStub = await appBeacon.implementation();
+  console.log(`app impl at ${appImplStub}`)
 
+  console.log(`wait before verifying...`)
+  await sleep(10_000)
+  await verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Airdrop", appImplStub).catch(err=>console.log(`verify contract fail ${err}`))
 }
 
 async function deployProxy(name: string, args: any[]) {

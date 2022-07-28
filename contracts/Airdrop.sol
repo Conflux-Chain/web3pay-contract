@@ -28,7 +28,7 @@ contract Airdrop is APPCoin {
     /** Query user's balance, returns (total amount, airdrop amount) */
     function balanceOfWithAirdrop(address owner) public view override returns (uint256 total, uint256 airdrop_){
         airdrop_ = drops[owner];
-        total = balanceOf(owner) + airdrop_;
+        total = balanceOf(owner, FT_ID) + airdrop_;
     }
     /**
      * Charge account's quota.
