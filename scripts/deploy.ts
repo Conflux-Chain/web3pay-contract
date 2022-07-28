@@ -6,7 +6,8 @@
 import {ethers, upgrades} from "hardhat";
 import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
-import {attach, deploy, tokensNet71} from "./lib";
+import {verifyContract} from "./verify-scan";
+import {attach, deploy, sleep, tokensNet71} from "./lib";
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
