@@ -179,7 +179,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         apiCoin = apiCoin_;
         appOwner = appOwner_;
         forceWithdrawDelay = 3600;
-        nextConfigId = 1; // starts from 1, not zero
+        nextConfigId = FIRST_CONFIG_ID; // starts from 1, not zero
         ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
         _configResource(request);
     }

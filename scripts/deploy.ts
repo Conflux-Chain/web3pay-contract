@@ -8,7 +8,11 @@ import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
 import {attach, deploy, sleep, tokensNet71} from "./lib";
+
 async function main() {
+  await upgradeApp()
+}
+async function deployIt() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
   //
@@ -58,6 +62,12 @@ async function deployProxy(name: string, args: any[]) {
   return contract;
 }
 
+async function upgradeApp() {
+  const newAppImpl = await deploy("Airdrop", [])
+  const beacon = await attach("UpgradeableBeacon", "0x880b7967d87eb1ea5bf0a5fbeb5f6cf371e43816") as UpgradeableBeacon
+  const receipt = await beacon.upgradeTo(newAppImpl?.address!).then(tx=>tx.wait())
+  console.log(`upgraded to ${newAppImpl?.address}, tx ${receipt.transactionHash}`)
+}
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
