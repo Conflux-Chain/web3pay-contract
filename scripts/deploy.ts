@@ -33,7 +33,7 @@ async function main() {
   const api = await attach("APICoin", apiProxy.address) as APICoin
 
   const controller = await deploy("Controller", [api!.address]) as Controller;
-  await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`).then(tx=>tx.wait())
+  await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com").then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
 
   let appBase = await controller.appBase();
