@@ -64,7 +64,7 @@ abstract contract AppConfig {
 
             resources[resourceId] = id;
             resourceConfigures[id] = ConfigEntry(resourceId, weight, uint32(indexArray.length));
-            _mintConfig(address(this), FT_ID, weight, "add config");
+            _mintConfig(address(this), id, weight, "add config");
 
             // track index.
             indexArray.push(id);
