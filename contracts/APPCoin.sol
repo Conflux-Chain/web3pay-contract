@@ -4,9 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
+
 import "./AppConfig.sol";
 
 /** @dev Settlement contract between API consumer and API supplier.
@@ -23,7 +26,7 @@ import "./AppConfig.sol";
  * - forceWithdraw
  * - freeze
  */
-contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient {
+contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IERC1155Receiver {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     IERC1820Registry internal constant _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     address public apiCoin;
@@ -195,6 +198,44 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient {
 
     function balanceOfWithAirdrop(address owner) virtual view public returns (uint256 total, uint256 airdrop) {
         return (balanceOf(owner, FT_ID), 0);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC1155) returns (bool) {
+        return
+        interfaceId == type(IERC1155).interfaceId ||
+        interfaceId == type(IERC1155MetadataURI).interfaceId ||
+        interfaceId == type(IERC1155Receiver).interfaceId ||
+        super.supportsInterface(interfaceId);
+    }
+    function onERC1155Received(
+        address,// operator,
+        address,// from,
+        uint256,// id,
+        uint256,// value,
+        bytes calldata// data
+    ) external override pure returns (bytes4){
+        return 0xf23a6e61;
+    }
+    function onERC1155BatchReceived(
+        address,// operator,
+        address,// from,
+        uint256[] calldata,// ids,
+        uint256[] calldata,// values,
+        bytes calldata// data
+    ) external override pure returns (bytes4) {
+        return 0xbc197c81;
+    }
+
+    function uri(uint256 tokenId) public view virtual override returns (string memory) {
+        string memory _name = tokenId == FT_ID ? name : resourceConfigures[uint32(tokenId)].resourceId;
+        string memory _desc = super.uri(tokenId);
+        string memory json;
+        string memory output;
+        json = Base64.encode(bytes(string(abi.encodePacked("{\"name\":\"",_name,"\",\"description\":\"",_desc,"\"}"))));
+        output = string(
+            abi.encodePacked("data:application/json;base64,", json)
+        );
+        return output;
     }
 
     function _mintConfig(
