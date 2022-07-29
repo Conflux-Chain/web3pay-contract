@@ -10,7 +10,9 @@ abstract contract AppConfig {
     }
     /* token id for fungible token (ERC20, APP Coin) */
     uint256 public constant FT_ID = 0;
-    /** auto-increment id, starts from 1 */
+    /** reserve gap */
+    uint32 public constant FIRST_CONFIG_ID = 101;
+    /** auto-increment id, starts from `FIRST_CONFIG_ID` */
     uint32 public nextConfigId;
     /** store, key is auto-generated id */
     mapping(uint32=> ConfigEntry) public resourceConfigures;
@@ -55,7 +57,7 @@ abstract contract AppConfig {
         uint32 weight = entry.weight;
         OP op = entry.op;
         if (op == OP.ADD) {
-            // id starts from 1, if resourceId=>id > 0, it's added already.
+            // id starts from `FIRST_CONFIG_ID`, if resourceId=>id > 0, it's added already.
             require(resources[resourceId] == 0, 'resource already added');
             require(id == 0, "id should be zero when adding");
 
@@ -69,17 +71,17 @@ abstract contract AppConfig {
             // track index.
             indexArray.push(id);
         } else if (op == OP.UPDATE) {
-            require(id > 0, 'invalid id');
+            require(id >= FIRST_CONFIG_ID, 'invalid id');
             require(resources[resourceId] == id, 'id/resourceId mismatch');
             if (weight >= resourceConfigures[id].weight) {
-                _mintConfig(address(this), FT_ID, weight - resourceConfigures[id].weight, "update config");
+                _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
             } else {
-                _burnConfig(address(this), FT_ID, resourceConfigures[id].weight - weight);
+                _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
             }
             resourceConfigures[id].weight = weight;
         } else if (op == OP.DELETE) {
             require(resources[resourceId] == id, 'resource id mismatch');
-            require(id > 1, 'can not delete id 1');
+            require(id > FIRST_CONFIG_ID, 'can not delete default entry');
             uint32 lastIdValue = indexArray[indexArray.length - 1];
             indexArray.pop();
             if (id == lastIdValue) {
@@ -91,7 +93,7 @@ abstract contract AppConfig {
                 // update index for that entry
                 resourceConfigures[lastIdValue].index = indexInArray;
             }
-            _burnConfig(address(this), FT_ID, resourceConfigures[id].weight);
+            _burnConfig(address(this), id, resourceConfigures[id].weight);
             delete resources[resourceId];
             delete resourceConfigures[id];
         }

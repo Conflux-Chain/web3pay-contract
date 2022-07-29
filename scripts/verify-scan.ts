@@ -1,3 +1,6 @@
+if (!process.env.TEST_SCAN_URL) {
+	require("dotenv").config()
+}
 const [schema, host] = process.env.TEST_SCAN_URL!.split("://")
 let https = schema === 'http' ?
 	require('http') : require('https')
@@ -8,7 +11,7 @@ async function main() {
 	await Promise.all([
 		// verifyContract('Controller', '0x0cce3a75536c3ba9612bd0eef2979cb494562340'),
 		// verifyContract('APICoin', '0x3940a9d4f4548fc4721ffc27eb6e21f16cb75c99'), // api impl
-		verifyContract('APPCoin', '0x3f7fd8d225daf2ad84ab79d3495af89491a37c29'),
+		verifyContract('Airdrop', '0x9cf7821c63b3388E06eeE881c1ff55d918198DcD'),
 		// verifyContract('TokenRouter', '0x8948152d858d6713D0A62649DAD9B3384bdd92f3'),
 		]
 	)
