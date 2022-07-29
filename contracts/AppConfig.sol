@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
+
 /** Configuration functions for an App */
 abstract contract AppConfig {
     event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
@@ -7,6 +8,11 @@ abstract contract AppConfig {
         string resourceId;
         uint32 weight;
         uint32 index; // index in indexArray
+        // pending action
+        OP pendingOP;
+        uint32 pendingWeight;
+        /* when the pending action was submitted */
+        uint submitSeconds;
     }
     /* token id for fungible token (ERC20, APP Coin) */
     uint256 public constant FT_ID = 0;
@@ -20,9 +26,13 @@ abstract contract AppConfig {
     uint32[] public indexArray;
     /** resourceId => id */
     mapping(string=>uint32) resources;
+    //----- pending -----
+    uint32[] public pendingIdArray;
+    mapping(uint32=>bool) pendingIdMap;
+    uint256 public pendingSeconds = 3600 * 24 * 7;
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
-    enum OP {ADD,UPDATE,DELETE}
+    enum OP {ADD,UPDATE,DELETE, NO_PENDING, PENDING_INIT_DEFAULT}
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     struct ConfigRequest {
@@ -65,23 +75,33 @@ abstract contract AppConfig {
             nextConfigId += 1;
 
             resources[resourceId] = id;
-            resourceConfigures[id] = ConfigEntry(resourceId, weight, uint32(indexArray.length));
-            _mintConfig(address(this), id, weight, "add config");
+            resourceConfigures[id] = ConfigEntry(resourceId, 0, uint32(indexArray.length), op, weight, block.timestamp);
+            /*pending*/ //_mintConfig(address(this), id, weight, "add config");
 
             // track index.
             indexArray.push(id);
         } else if (op == OP.UPDATE) {
             require(id >= FIRST_CONFIG_ID, 'invalid id');
             require(resources[resourceId] == id, 'id/resourceId mismatch');
-            if (weight >= resourceConfigures[id].weight) {
-                _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
+            if(resourceConfigures[id].pendingOP == OP.PENDING_INIT_DEFAULT) {
+                // give only one chance to set the default weight directly (without delay execution).
+                if (weight >= resourceConfigures[id].weight) {
+                    _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
+                } else {
+                    _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
+                }
+                resourceConfigures[id].weight = weight;
+                resourceConfigures[id].pendingOP = OP.NO_PENDING;
+                emit ResourceChanged(id, weight, op);
+                return;
             } else {
-                _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
+                setPendingProp(id, op, weight);
             }
-            resourceConfigures[id].weight = weight;
         } else if (op == OP.DELETE) {
             require(resources[resourceId] == id, 'resource id mismatch');
             require(id > FIRST_CONFIG_ID, 'can not delete default entry');
+            setPendingProp(id, op, weight);
+            /*pending
             uint32 lastIdValue = indexArray[indexArray.length - 1];
             indexArray.pop();
             if (id == lastIdValue) {
@@ -96,10 +116,83 @@ abstract contract AppConfig {
             _burnConfig(address(this), id, resourceConfigures[id].weight);
             delete resources[resourceId];
             delete resourceConfigures[id];
+            */
+        } else {
+            revert("invalid operation");
         }
-        emit ResourceChanged(id, weight, op);
+        if (!pendingIdMap[id]) {
+            pendingIdMap[id] = true;
+            pendingIdArray.push(id);
+        }
+        /*pending*/ //emit ResourceChanged(id, weight, op);
     }
-
+    function setPendingProp(uint32 id, OP op_, uint32 weight_) internal {
+        resourceConfigures[id].pendingOP = op_;
+        resourceConfigures[id].pendingWeight = weight_;
+        resourceConfigures[id].submitSeconds = block.timestamp;
+    }
+    function flushPendingConfig() public {
+        _flushPendingConfig(pendingSeconds);
+    }
+    function _flushPendingConfig(uint256 pendingSeconds_) internal {
+        uint32[] memory newPendingArray;
+        uint newIndex = 0;
+        if (pendingIdArray.length == 0) {
+            revert("should not happen");
+        }
+        for(uint i=pendingIdArray.length - 1; i >= 0; i--) {
+            uint32 id = pendingIdArray[i];
+            // clean it
+            pendingIdArray.pop();
+            ConfigEntry storage config = resourceConfigures[id];
+            if (block.timestamp - config.submitSeconds < pendingSeconds_) {
+                newPendingArray[newIndex++] = id;
+                continue;
+            }
+            OP op = config.pendingOP;
+            uint32 weight = config.pendingWeight;
+            if (op == OP.ADD) {
+                config.weight = config.pendingWeight;
+                _mintConfig(address(this), id, weight, "add config");
+            } else if (op == OP.UPDATE) {
+                config.weight = config.pendingWeight;
+                if (weight >= resourceConfigures[id].weight) {
+                    _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
+                } else {
+                    _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
+                }
+            } else if (op == OP.DELETE) {
+                uint32 lastIdValue = indexArray[indexArray.length - 1];
+                indexArray.pop();
+                if (id == lastIdValue) {
+                    // just the last one
+                } else {
+                    uint32 indexInArray = resourceConfigures[id].index;
+                    // move id at the end to current index
+                    indexArray[indexInArray] = lastIdValue;
+                    // update index for that entry
+                    resourceConfigures[lastIdValue].index = indexInArray;
+                }
+                _burnConfig(address(this), id, resourceConfigures[id].weight);
+                delete resources[config.resourceId];
+                delete resourceConfigures[id];
+            }
+            emit ResourceChanged(id, weight, op);
+            // cleanup
+            config.pendingOP = OP.NO_PENDING;
+            delete pendingIdMap[id];
+            // keeps information
+            //config.submitSeconds = 0;
+            //config.pendingWeight = 0;
+            if (i==0) {
+                break;
+            }
+        }
+        // set still pending ids
+        for(uint i=0; i<newPendingArray.length; i++) {
+            pendingIdArray.push(newPendingArray[i]);
+        }
+    }
     function listResources(uint256 offset, uint256 limit) public view returns(ConfigEntry[] memory, uint256 total) {
         total = indexArray.length;
         require(offset <= total, 'invalid offset');
