@@ -208,21 +208,21 @@ describe("ApiCoin", async function () {
     // batch
     await app
       .configResourceBatch([
-        {id: 0, resourceId: 'p3', weight: 103, op: OP.ADD}, //add p3, id 3, index 2
-        {id: 0, resourceId: 'p4', weight: 104, op: OP.ADD}, //add p4, id 4, index 3
-        {id: 0, resourceId: 'p5', weight: 105, op: OP.ADD}, //add p5, id 5, index 4
+        {id: 0, resourceId: 'p3', weight: 103, op: OP.ADD}, //add p3, id 103, index 2
+        {id: 0, resourceId: 'p4', weight: 104, op: OP.ADD}, //add p4, id 104, index 3
+        {id: 0, resourceId: 'p5', weight: 105, op: OP.ADD}, //add p5, id 105, index 4
 
         {id: 104, resourceId: 'p4', weight: 204, op: OP.UPDATE}, //update p4, id 4, index 3
         {id: 103, resourceId: 'p3', weight: 204, op: OP.DELETE}, //delete p3, id 3, index 2 -- delete
       ]) // index array [1, 2, 3, 4, 5] delete id 3 index 2 => [1, 2, 5, 4]
       .then((res) => res.wait());
-    assert(await app.nextConfigId() == 106, 'next id should be 6');
+    assert(await app.nextConfigId() == 106, 'next id should be 106');
     //
     const [list0,total0] = await app.listResources(0, 30);
     assert(list0.length == 5, `should have 5 items, actual ${list0.length}`);
-    //
+    // hack pending seconds and flush configures.
     await app.setPendingSeconds(0).then(tx=>tx.wait())
-    await app.flushPendingConfig().then(tx=>tx.wait());
+    await app.flushPendingConfig().then(tx=>tx.wait())//.then(dumpEvent);
 
     const [list,total] = await app.listResources(0, 30);
     assert(list.length == 4, `should have 4 items, actual ${list.length}`);
@@ -230,6 +230,16 @@ describe("ApiCoin", async function () {
     assert(path == 'p5', 'resource id should be right')
     assert(w == 105, 'weight should be right')
     assert(index == 2, `index should be right, ${index} vs 3 `)
+
+    const nftAmount = await app.balanceOf(app.address, 105).then(res=>res.toNumber());
+    assert( nftAmount == 105, `nft amount want 105 vs ${nftAmount}`);
+
+    console.log(`config is `, await app.resourceConfigures(104))
+    const nftAmount104 = await app.balanceOf(app.address, 104).then(res=>{
+      return res.toNumber()
+    });
+    assert( nftAmount104 == 204, `nft amount want 204 vs ${nftAmount104}`);
+
   });
   it("check permission", async function () {
     const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;

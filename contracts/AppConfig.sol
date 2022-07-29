@@ -32,7 +32,7 @@ abstract contract AppConfig {
     uint256 public pendingSeconds = 3600 * 24 * 7;
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
-    enum OP {ADD,UPDATE,DELETE, NO_PENDING, PENDING_INIT_DEFAULT}
+    enum OP {ADD/*0*/,UPDATE/*1*/,DELETE/*2*/, NO_PENDING/*3*/, PENDING_INIT_DEFAULT/*4*/}
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     struct ConfigRequest {
@@ -152,15 +152,15 @@ abstract contract AppConfig {
             OP op = config.pendingOP;
             uint32 weight = config.pendingWeight;
             if (op == OP.ADD) {
-                config.weight = config.pendingWeight;
                 _mintConfig(address(this), id, weight, "add config");
-            } else if (op == OP.UPDATE) {
                 config.weight = config.pendingWeight;
-                if (weight >= resourceConfigures[id].weight) {
+            } else if (op == OP.UPDATE) {
+                if (weight >= config.weight) {
                     _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
                 } else {
                     _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
                 }
+                config.weight = config.pendingWeight;
             } else if (op == OP.DELETE) {
                 uint32 lastIdValue = indexArray[indexArray.length - 1];
                 indexArray.pop();
