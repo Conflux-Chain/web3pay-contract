@@ -226,10 +226,11 @@ describe("ApiCoin", async function () {
 
     const [list,total] = await app.listResources(0, 30);
     assert(list.length == 4, `should have 4 items, actual ${list.length}`);
-    const [,,[path, w, index]] = list;
+    const [,,[path, w, index, pendingOP]] = list;
     assert(path == 'p5', 'resource id should be right')
     assert(w == 105, 'weight should be right')
     assert(index == 2, `index should be right, ${index} vs 3 `)
+    assert(pendingOP.toString() == OP.NO_PENDING.toString(), `want no pending, ${pendingOP} vs ${OP.NO_PENDING} `)
 
     const nftAmount = await app.balanceOf(app.address, 105).then(res=>res.toNumber());
     assert( nftAmount == 105, `nft amount want 105 vs ${nftAmount}`);

@@ -54,6 +54,13 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     uint256 public totalCharged;
     uint256 public totalTakenProfit;
 
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[40] private __gap;
+
     struct ChargeRequest {
         address account;
         uint256 amount;
