@@ -44,7 +44,7 @@ abstract contract AppConfig {
         OP op;
     }
     /* request counter per user, per resource id */
-    mapping(address=>mapping(uint32=>uint256)) requestCounter;
+    mapping(address=>mapping(uint32=>uint256)) userRequestCounter;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -205,7 +205,7 @@ abstract contract AppConfig {
     function listUserRequestCounter(address user, uint32[] memory ids) public view returns (uint256[] memory times) {
         times = new uint256[](ids.length);
         for(uint32 i=0; i<ids.length;i++) {
-            times[i] = requestCounter[user][ids[i]];
+            times[i] = userRequestCounter[user][ids[i]];
         }
     }
     function listResources(uint256 offset, uint256 limit) public view returns(ConfigEntry[] memory, uint256 total) {

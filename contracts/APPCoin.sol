@@ -135,7 +135,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
                 continue;
             }
             config.requestTimes += useDetail[i].times;
-            requestCounter[account][id] += useDetail[i].times;
+            userRequestCounter[account][id] += useDetail[i].times;
         }
 
         if (frozenMap[account] > 1) {
