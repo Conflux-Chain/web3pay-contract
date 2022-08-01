@@ -13,6 +13,7 @@ abstract contract AppConfig {
         uint32 pendingWeight;
         /* when the pending action was submitted */
         uint submitSeconds;
+        uint256 requestTimes;
     }
     /* token id for fungible token (ERC20, APP Coin) */
     uint256 public constant FT_ID = 0;
@@ -42,13 +43,14 @@ abstract contract AppConfig {
         /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
         OP op;
     }
-
+    /* request counter per user, per resource id */
+    mapping(address=>mapping(uint32=>uint256)) requestCounter;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 
     constructor(){
         // nothing
@@ -82,7 +84,7 @@ abstract contract AppConfig {
             nextConfigId += 1;
 
             resources[resourceId] = id;
-            resourceConfigures[id] = ConfigEntry(resourceId, 0, uint32(indexArray.length), op, weight, block.timestamp);
+            resourceConfigures[id] = ConfigEntry(resourceId, 0, uint32(indexArray.length), op, weight, block.timestamp, 0);
             /*pending*/ //_mintConfig(address(this), id, weight, "add config");
 
             // track index.
@@ -198,6 +200,12 @@ abstract contract AppConfig {
         // set still pending ids
         for(uint i=0; i<newPendingArray.length; i++) {
             pendingIdArray.push(newPendingArray[i]);
+        }
+    }
+    function listUserRequestCounter(address user, uint32[] memory ids) public view returns (uint256[] memory times) {
+        times = new uint256[](ids.length);
+        for(uint32 i=0; i<ids.length;i++) {
+            times[i] = requestCounter[user][ids[i]];
         }
     }
     function listResources(uint256 offset, uint256 limit) public view returns(ConfigEntry[] memory, uint256 total) {

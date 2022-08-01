@@ -61,10 +61,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
      */
     uint256[40] private __gap;
 
+    struct ResourceUseDetail {
+        uint32 id;
+        uint256 times;
+    }
     struct ChargeRequest {
         address account;
         uint256 amount;
         bytes data;
+        /* resource consumed under this charge */
+        ResourceUseDetail[] useDetail;
     }
 
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
@@ -108,11 +114,11 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     function chargeBatch(ChargeRequest[] memory requestArray) public onlyAppOwner whenNotPaused {
         for(uint i=0; i<requestArray.length; i++) {
             ChargeRequest memory request = requestArray[i];
-            charge(request.account, request.amount, request.data);
+            charge(request.account, request.amount, request.data, request.useDetail);
         }
     }
     /** @dev Charge fee*/
-    function charge(address account, uint256 amount, bytes memory /*data*/) public virtual onlyAppOwner whenNotPaused{
+    function charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) public virtual onlyAppOwner whenNotPaused{
         _burn(account, FT_ID, amount);
         totalCharged += amount;
         if (chargedMapping[account] == 0 && amount > 0) {
@@ -120,6 +126,18 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             users.push(account);
         }
         chargedMapping[account] += amount;
+
+        for(uint i=0; i<useDetail.length; i++) {
+            uint32 id = useDetail[i].id;
+            ConfigEntry storage config = resourceConfigures[id];
+            if (indexArray[config.index] == 0) {
+                // id is zero, indicates this config doesn't exist
+                continue;
+            }
+            config.requestTimes += useDetail[i].times;
+            requestCounter[account][id] += useDetail[i].times;
+        }
+
         if (frozenMap[account] > 1) {
             // refund
             uint256 appCoinLeft = balanceOf(account, FT_ID);

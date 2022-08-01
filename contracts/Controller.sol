@@ -29,11 +29,12 @@ contract Controller is Ownable {
     }
     mapping(address=>AppInfo[]) creatorAppTrack;
 
-    constructor (address api_){
-        Airdrop appImpl = new Airdrop();
-        UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
-        appUpgradeableBeacon.transferOwnership(msg.sender);
-        appBase = address(appUpgradeableBeacon);
+    constructor (address api_, address appBase_){
+//        Airdrop appImpl = new Airdrop();
+//        UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
+//        appUpgradeableBeacon.transferOwnership(msg.sender);
+//        appBase = address(appUpgradeableBeacon);
+        appBase = appBase_;
         api = api_;
     }
     /**
