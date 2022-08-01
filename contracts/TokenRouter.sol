@@ -33,6 +33,12 @@ interface ISwap {
 contract TokenRouter {
     /** Token used for pricing. */
     address public baseToken;
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
     constructor() {
     }
     /** Set baseToken. Cannot put it in constructor because subcontract may be proxyable. */

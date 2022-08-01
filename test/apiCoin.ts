@@ -8,7 +8,7 @@ import assert from "assert";
 const {
   utils: { formatEther, parseEther },
 } = ethers;
-enum OP {ADD,UPDATE,DELETE}
+enum OP {ADD,UPDATE,DELETE,  NO_PENDING, PENDING_INIT_DEFAULT}
 let baseToken = ethers.constants.AddressZero
 async function attach(name:string, to:string) {
   const template = await ethers.getContractFactory(name);
@@ -131,7 +131,11 @@ describe("Controller", async function () {
     // call new method
     const appV2 = await v2.attach(app1addr)
     expect(await appV2.version()).eq("App v2");
-    expect(await originApp1.resourceConfigures(2).then(info=>info.weight)).eq(10)
+    expect(await originApp1.resourceConfigures(102).then(info=>info.pendingWeight)).eq(10)
+    await expect(appV2.setPendingSeconds(0)).revertedWith(`only available on testnet`);
+    assert(await appV2.resourceConfigures(101).then(res=>res.pendingOP.toString()) == OP.PENDING_INIT_DEFAULT.toString(), `want PENDING_INIT_DEFAULT`)
+    await appV2.configResource({id: 101, resourceId: 'default', weight: 101, op: OP.UPDATE}).then(tx=>tx.wait())
+    expect(await originApp1.resourceConfigures(101).then(info=>info.weight)).eq(101)
   })
 })
 describe("ApiCoin", async function () {
@@ -168,12 +172,12 @@ describe("ApiCoin", async function () {
     const app = (await deployApp("APPCoin", [
       api.address,
       acc1,
-      "APP 1",
-      "APP1",
+      "DO_NOT_DEPOSIT",
+      "ALL_YOU_FUNDS_WILL_LOST",
     ])) as APPCoin;
     // default resource weight 1, id 1, index 0
-    let defaultConfig = await app.resourceConfigures(1);
-    assert(defaultConfig.weight == 1,'default weight should be 1')
+    let defaultConfig = await app.resourceConfigures(await app.FIRST_CONFIG_ID());
+    assert(defaultConfig.weight == 1,`default weight should be 1 vs ${defaultConfig.weight}`)
     assert(defaultConfig.resourceId == 'default','default resourceId should be <default>')
     assert(defaultConfig.index == 0,'default resource index should be 0')
     // add new one, auto id 2, index 1
@@ -184,18 +188,18 @@ describe("ApiCoin", async function () {
     let config2 = await app.resourceConfigures(2)
     expect(config2.index == 1, 'index should be 1 for config 2');
 
-    assert(await app.nextConfigId() == 3, 'next id should be 3')
+    assert(await app.nextConfigId() == 103, 'next id should be 3')
 
     // update
-    await app.configResource({id: 2, resourceId: "path2", weight:200, op: OP.UPDATE})
+    await app.configResource({id: 102, resourceId: "path2", weight:200, op: OP.UPDATE})
         .then(tx=>tx.wait())
-    config2 = await app.resourceConfigures(2)
-    assert(config2.weight == 200, 'weight should be updated')
+    config2 = await app.resourceConfigures(102)
+    assert(config2.pendingWeight == 200, 'pending weight should be updated')
     assert(config2.index == 1, 'index should be 1')
 
     // id mismatch resource id
     await expect(
-      app.configResource({id: 1, resourceId: "pathN", weight: 3, op: OP.UPDATE})
+      app.configResource({id: 101, resourceId: "pathN", weight: 3, op: OP.UPDATE})
     ).to.be.revertedWith(`id/resourceId mismatch`);
     // duplicate adding
     await expect(
@@ -204,22 +208,39 @@ describe("ApiCoin", async function () {
     // batch
     await app
       .configResourceBatch([
-        {id: 0, resourceId: 'p3', weight: 103, op: OP.ADD}, //add p3, id 3, index 2
-        {id: 0, resourceId: 'p4', weight: 104, op: OP.ADD}, //add p4, id 4, index 3
-        {id: 0, resourceId: 'p5', weight: 105, op: OP.ADD}, //add p5, id 5, index 4
+        {id: 0, resourceId: 'p3', weight: 103, op: OP.ADD}, //add p3, id 103, index 2
+        {id: 0, resourceId: 'p4', weight: 104, op: OP.ADD}, //add p4, id 104, index 3
+        {id: 0, resourceId: 'p5', weight: 105, op: OP.ADD}, //add p5, id 105, index 4
 
-        {id: 4, resourceId: 'p4', weight: 204, op: OP.UPDATE}, //update p4, id 4, index 3
-        {id: 3, resourceId: 'p3', weight: 204, op: OP.DELETE}, //delete p3, id 3, index 2 -- delete
+        {id: 104, resourceId: 'p4', weight: 204, op: OP.UPDATE}, //update p4, id 4, index 3
+        {id: 103, resourceId: 'p3', weight: 204, op: OP.DELETE}, //delete p3, id 3, index 2 -- delete
       ]) // index array [1, 2, 3, 4, 5] delete id 3 index 2 => [1, 2, 5, 4]
       .then((res) => res.wait());
-    assert(await app.nextConfigId() == 6, 'next id should be 6');
+    assert(await app.nextConfigId() == 106, 'next id should be 106');
     //
+    const [list0,total0] = await app.listResources(0, 30);
+    assert(list0.length == 5, `should have 5 items, actual ${list0.length}`);
+    // hack pending seconds and flush configures.
+    await app.setPendingSeconds(0).then(tx=>tx.wait())
+    await app.flushPendingConfig().then(tx=>tx.wait())//.then(dumpEvent);
+
     const [list,total] = await app.listResources(0, 30);
-    assert(list.length == 4, 'should have 4 items');
-    const [,,[path, w, index]] = list;
+    assert(list.length == 4, `should have 4 items, actual ${list.length}`);
+    const [,,[path, w, index, pendingOP]] = list;
     assert(path == 'p5', 'resource id should be right')
     assert(w == 105, 'weight should be right')
     assert(index == 2, `index should be right, ${index} vs 3 `)
+    assert(pendingOP.toString() == OP.NO_PENDING.toString(), `want no pending, ${pendingOP} vs ${OP.NO_PENDING} `)
+
+    const nftAmount = await app.balanceOf(app.address, 105).then(res=>res.toNumber());
+    assert( nftAmount == 105, `nft amount want 105 vs ${nftAmount}`);
+
+    console.log(`config is `, await app.resourceConfigures(104))
+    const nftAmount104 = await app.balanceOf(app.address, 104).then(res=>{
+      return res.toNumber()
+    });
+    assert( nftAmount104 == 204, `nft amount want 204 vs ${nftAmount104}`);
+
   });
   it("check permission", async function () {
     const api = (await deployProxy("APICoin", ["main coin", "mc", baseToken, []])) as APICoin;

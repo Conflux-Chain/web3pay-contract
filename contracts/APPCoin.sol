@@ -54,6 +54,13 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     uint256 public totalCharged;
     uint256 public totalTakenProfit;
 
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[40] private __gap;
+
     struct ChargeRequest {
         address account;
         uint256 amount;
@@ -179,9 +186,11 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         apiCoin = apiCoin_;
         appOwner = appOwner_;
         forceWithdrawDelay = 3600;
-        nextConfigId = FIRST_CONFIG_ID; // starts from 1, not zero
+        nextConfigId = FIRST_CONFIG_ID;
         ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
         _configResource(request);
+        _flushPendingConfig(0);
+        resourceConfigures[FIRST_CONFIG_ID].pendingOP = OP.PENDING_INIT_DEFAULT;
     }
 
     function pause() public onlyOwner {
@@ -252,5 +261,19 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         uint256 amount
     ) internal override virtual {
         _burn(from,id,amount);
+    }
+
+    function setPendingSeconds(uint seconds_) public {
+        require(hashCompareWithLengthCheck(name, "DO_NOT_DEPOSIT"), "only available on testnet");
+        require(hashCompareWithLengthCheck(symbol, "ALL_YOU_FUNDS_WILL_LOST"), "only available on testnet~");
+        pendingSeconds = seconds_;
+    }
+
+    function hashCompareWithLengthCheck(string memory a, string memory b) internal pure returns (bool) {
+        if(bytes(a).length != bytes(b).length) {
+            return false;
+        } else {
+            return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+        }
     }
 }
