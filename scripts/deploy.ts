@@ -68,7 +68,7 @@ async function deployProxy(name: string, args: any[]) {
 
 async function upgradeApp() {
   const newAppImpl = await deploy("Airdrop", [])
-  const beacon = await attach("UpgradeableBeacon", "0x880b7967d87eb1ea5bf0a5fbeb5f6cf371e43816") as UpgradeableBeacon
+  const beacon = await attach("UpgradeableBeacon", "0xde63bf7ee5685da53c39e92388131e2810f1a98e") as UpgradeableBeacon
   const receipt = await beacon.upgradeTo(newAppImpl?.address!).then(tx=>tx.wait())
   console.log(`upgraded to ${newAppImpl?.address}, tx ${receipt.transactionHash}`)
 }

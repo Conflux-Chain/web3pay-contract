@@ -11,7 +11,7 @@ async function main() {
 	await Promise.all([
 		// verifyContract('Controller', '0x0cce3a75536c3ba9612bd0eef2979cb494562340'),
 		// verifyContract('APICoin', '0x3940a9d4f4548fc4721ffc27eb6e21f16cb75c99'), // api impl
-		verifyContract('Airdrop', '0xeC211Ce773f7EdD8C0DfcC3e2F6F399C72f6Ec1D'),
+		verifyContract('Airdrop', '0xbb769D6e7911d35c6A5ca97D68E393DF5Ad6969e'),
 		// verifyContract('TokenRouter', '0x8948152d858d6713D0A62649DAD9B3384bdd92f3'),
 		]
 	)
@@ -25,7 +25,7 @@ export async function verifyContract(contract: string, address: string) {
 	delete resultJson["sourceCode"]
 	delete resultJson["abi"]
 	const {exactMatch, errors} = resultJson;
-	console.log(`result ${contract} , exactMatch `,exactMatch,` errors [${errors.join(',')}]`, )
+	console.log(`result ${contract} , exactMatch `,exactMatch,` errors [${(errors||[]).join(',')}]`, )
 }
 async function verifyAsync(host:string, address:string, contract:string) {
 	return new Promise<string>(resolve => verify(host, address, contract, resolve))
