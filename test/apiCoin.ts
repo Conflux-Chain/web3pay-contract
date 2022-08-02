@@ -61,7 +61,9 @@ describe("Controller", async function () {
   const [acc1, acc2] = await Promise.all(signerArr.map((s) => s.getAddress()));
   it("createApp" , async function (){
     const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
-    const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
+    const app_ = await deploy("Airdrop", []) as Airdrop
+    const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
+    const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
 
     const tx = controller.createApp("CoinA", "CA", "app description")
     await expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
@@ -87,7 +89,9 @@ describe("Controller", async function () {
     expect(createdAppArr[0].addr).eq(createdAppAddr)
   })
   it("list created app", async function (){
-    const controller = await deploy("Controller", [ethers.constants.AddressZero]).then(res=>res as Controller);
+    const app_ = await deploy("Airdrop", []) as Airdrop
+    const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
+    const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
     await controller.createApp("app 2", "a2", "app description").then(tx=>tx.wait());
     const [arr, total] = await controller.listApp(0, 10);
@@ -96,7 +100,9 @@ describe("Controller", async function () {
   })
   it("upgrade api contract, UUPS", async function (){
     const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
-    const controller = await deploy("Controller", [api.address]).then(res=>res as Controller);
+    const app_ = await deploy("Airdrop", []) as Airdrop
+    const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
+    const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
     const api1addr = api.address
     const app1 = await controller.appMapping(0)
@@ -112,7 +118,9 @@ describe("Controller", async function () {
   })
 
   it("upgrade app, beacon", async function (){
-    const controller = await deploy("Controller", [ethers.constants.AddressZero]).then(res=>res as Controller);
+    const app_ = await deploy("Airdrop", []) as Airdrop
+    const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
+    const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
 
     const app1addr = await controller.appMapping(0);
@@ -323,15 +331,15 @@ describe("ApiCoin", async function () {
     await Promise.all([signer2, signer3].map(s=>{
       return api.connect(s).depositToApp(appOwnerAcc2.address, {value: parseEther("1")}).then(tx=>tx.wait())
     }))
-    await appOwnerAcc2.charge(acc1, 1, Buffer.from("")).then(tx=>tx.wait())
+    await appOwnerAcc2.charge(acc1, 1, Buffer.from(""), []).then(tx=>tx.wait())
     await appOwnerAcc2.chargeBatch([
-      {account: acc1, amount: 1, data: Buffer.from("")},
-      {account: acc2, amount: 1, data: Buffer.from("")},
-      {account: acc3, amount: 1, data: Buffer.from("")},
+      {account: acc1, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times: 100}]},
+      {account: acc2, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times: 100}]},
+      {account: acc3, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times: 100}]},
 
-      {account: acc1, amount: 1, data: Buffer.from("")},
-      {account: acc2, amount: 1, data: Buffer.from("")},
-      {account: acc3, amount: 1, data: Buffer.from("")},
+      {account: acc1, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times:  10}]},
+      {account: acc2, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times: 100}]},
+      {account: acc3, amount: 1, data: Buffer.from(""), useDetail: [{id: 101, times: 100}]},
     ]).then(tx=>tx.wait());
     const [users, total] = await appOwnerAcc2.listUser(0, 10);
     assert(total.eq(3), 'should be 3 users')
@@ -342,16 +350,21 @@ describe("ApiCoin", async function () {
     assert(users[1][0] == acc2 || users[1][0] == acc3, 'user 1 should be acc2 or acc3')
     assert(users[2][0] == acc2 || users[2][0] == acc3, 'user 2 should be acc2 or acc3')
     assert(users[1][0] !== users[2][0], 'user 1 should not be user 2')
+    // check request counter
+    const config = await appOwnerAcc2.resourceConfigures(101)
+    assert(config.requestTimes.toNumber() == 510, `request times should be 610 vs ${config.requestTimes}`)
+    const [usage] = await appOwnerAcc2.listUserRequestCounter(acc1, [101])
+    assert(usage.toNumber() == 110, `user usage should be 110, vs ${usage}`)
   });
   it("charge and auto refund", async () => {
     const {api, app, app2} = await deployAndDeposit(signer1);
     // charge without refund
-    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
+    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费"), []))
         .to.be.emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
         .withArgs(acc1, acc1, ethers.constants.AddressZero, 0, parseEther("0.1"))
     await expect(app.withdrawRequest()).emit(app, app.interface.events["Frozen(address)"].name)
         .withArgs(acc1)
-    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费")))
+    await expect(app.charge(acc1, parseEther("0.1"), Buffer.from("扣费"), []))
         .emit(app, app.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
         .withArgs(acc1, ethers.constants.AddressZero, parseEther("0.8"))// burn
         .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
@@ -369,7 +382,7 @@ describe("ApiCoin", async function () {
     let [total, drop] = await airdrop.balanceOfWithAirdrop(acc1)
     assert( total.eq(parseEther("11")), `should be 11 app coin, ${total}`)
     assert( drop.eq(parseEther("10")), `should be 10 airdrop, ${drop}`)
-    await expect(app.charge(acc1, parseEther("1"), Buffer.from("sub 1 left 1 + 9")))
+    await expect(app.charge(acc1, parseEther("1"), Buffer.from("sub 1 left 1 + 9"), []))
         .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("1"))
         .emit(airdrop, airdrop.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
         .withArgs(await app.signer.getAddress(), acc1, ethers.constants.AddressZero, 0, parseEther("0"));
@@ -378,7 +391,7 @@ describe("ApiCoin", async function () {
     assert( drop.eq(parseEther("9")), `should be 9 airdrop, ${drop}`)
     assert(parseEther("1").eq(await airdrop.balanceOf(acc1, 0)), "should be 1 origin app coin")
 
-    await expect(app.charge(acc1, parseEther("9.5"), Buffer.from("sub 9.5 left 0.5 + 0")))
+    await expect(app.charge(acc1, parseEther("9.5"), Buffer.from("sub 9.5 left 0.5 + 0"), []))
         .emit(airdrop, airdrop.interface.events["Spend(address,uint256)"].name).withArgs(acc1, parseEther("9"))
         .emit(airdrop, airdrop.interface.events["TransferSingle(address,address,address,uint256,uint256)"].name)
         .withArgs(await app.signer.getAddress(), acc1, ethers.constants.AddressZero, 0, parseEther("0.5"));

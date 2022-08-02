@@ -30,7 +30,8 @@ export async function deploy(name:string, args:any[]) {
 	}
 	const deployer = await Factory.deploy(...args,
 	).catch(err=>{
-		console.log(`error deploy.`, err)
+		console.log(`error deploy ${name}.`, err)
+		console.log(`more info `, err.code, err.message, err.data)
 	});
 	if (!deployer) {
 		return;

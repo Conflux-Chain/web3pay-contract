@@ -35,7 +35,7 @@ contract Airdrop is APPCoin {
      * Will emit `Spend` event if airdrops are consumed.
      * Will always emit ERC20 `Transfer` event (even real quota consumed is zero).
      */
-    function charge(address account, uint256 amount, bytes memory data) public override onlyAppOwner whenNotPaused{
+    function charge(address account, uint256 amount, bytes memory data, ResourceUseDetail[] memory useDetail) public override onlyAppOwner whenNotPaused{
         uint256 dropBalance = drops[account];
         uint256 spendDrop = 0;
         uint256 spendSuper = amount;
@@ -55,6 +55,6 @@ contract Airdrop is APPCoin {
         }
         // even `spendSuper` is zero, this must be executed.
         // zero record could help tracking transfer transaction.
-        super.charge(account, spendSuper, data);
+        super.charge(account, spendSuper, data, useDetail);
     }
 }
