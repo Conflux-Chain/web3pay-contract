@@ -39,13 +39,14 @@ contract Controller is Ownable {
     }
     /**
     * @dev Create/register a DApp.
-    * An ERC777 contract will be deployed, which then will be used as a settlement contract between API consumer and API supplier.
-    * Caller's address will be used as the `appOwner` of the contract.
+    * Will deploy an ERC777 contract, then use it as a settlement contract between API consumer and API supplier.
+    * Set caller as `appOwner`.
+    * There is a delayed execution mechanism when configuring resources. It is best to set default weights at creation time.
     */
-    function createApp(string memory name_, string memory symbol_, string memory description_) public {
+    function createApp(string memory name_, string memory symbol_, string memory description_, uint256 defaultWeight) public {
         Airdrop app = Airdrop((address(new BeaconProxy(address(appBase), ""))));
         app.initOwner(address(this));
-        app.init(api, msg.sender, name_, symbol_, description_);
+        app.init(api, msg.sender, name_, symbol_, description_, defaultWeight);
         app.transferOwnership(owner());
         appMapping[nextId] = address(app);
         nextId += 1;

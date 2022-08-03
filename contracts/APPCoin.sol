@@ -194,7 +194,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(owner() == address(0), 'Owner exists');
         _transferOwnership(owner_);
     }
-    function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_, string memory uri_) public onlyOwner{
+    function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_, string memory uri_, uint256 defaultWeight) public onlyOwner{
         require(apiCoin == address(0), 'Already initialized!');
 
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
@@ -205,10 +205,9 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         appOwner = appOwner_;
         forceWithdrawDelay = 3600;
         nextConfigId = FIRST_CONFIG_ID;
-        ConfigRequest memory request = ConfigRequest(0, "default", 1, OP.ADD);
+        ConfigRequest memory request = ConfigRequest(0, "default", defaultWeight, OP.ADD);
         _configResource(request);
         _flushPendingConfig(0);
-        resourceConfigures[FIRST_CONFIG_ID].pendingOP = OP.PENDING_INIT_DEFAULT;
     }
 
     function pause() public onlyOwner {
@@ -281,6 +280,10 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _burn(from,id,amount);
     }
 
+    /**
+     * In order to facilitate debugging, a delayed effective time interval can be set.
+     * It is required that the name of this contract is DO_NOT_DEPOSIT and the symbol is ALL_YOU_FUNDS_WILL_LOST.
+     */
     function setPendingSeconds(uint seconds_) public {
         require(hashCompareWithLengthCheck(name, "DO_NOT_DEPOSIT"), "only available on testnet");
         require(hashCompareWithLengthCheck(symbol, "ALL_YOU_FUNDS_WILL_LOST"), "only available on testnet~");

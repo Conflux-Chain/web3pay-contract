@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-/** Configuration functions for an App */
+/**
+ * Configuration functions for an App.
+ */
 abstract contract AppConfig {
-    event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
+    event ResourceChanged(uint32 indexed id, uint256 indexed weight, OP indexed op);
+    event ResourcePending(uint32 indexed id, uint256 indexed newWeight, OP indexed op);
     struct ConfigEntry {
         string resourceId;
-        uint32 weight;
+        uint256 weight;
         uint32 index; // index in indexArray
         // pending action
         OP pendingOP;
-        uint32 pendingWeight;
+        uint256 pendingWeight;
         /* when the pending action was submitted */
         uint submitSeconds;
         uint256 requestTimes;
@@ -39,7 +42,7 @@ abstract contract AppConfig {
     struct ConfigRequest {
         uint32 id;
         string resourceId;
-        uint32 weight;
+        uint256 weight;
         /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
         OP op;
     }
@@ -66,6 +69,9 @@ abstract contract AppConfig {
         }
     }
 
+    /**
+     * There is a delayed execution mechanism when configuring resources.
+     */
     function configResource(ConfigRequest memory entry) public {
         _authorizeAppConfig();
         _configResource(entry);
@@ -73,7 +79,7 @@ abstract contract AppConfig {
     function _configResource(ConfigRequest memory entry) internal {
         uint32 id = entry.id;
         string memory resourceId = entry.resourceId;
-        uint32 weight = entry.weight;
+        uint256 weight = entry.weight;
         OP op = entry.op;
         if (op == OP.ADD) {
             // id starts from `FIRST_CONFIG_ID`, if resourceId=>id > 0, it's added already.
@@ -92,20 +98,7 @@ abstract contract AppConfig {
         } else if (op == OP.UPDATE) {
             require(id >= FIRST_CONFIG_ID, 'invalid id');
             require(resources[resourceId] == id, 'id/resourceId mismatch');
-            if(resourceConfigures[id].pendingOP == OP.PENDING_INIT_DEFAULT) {
-                // give only one chance to set the default weight directly (without delay execution).
-                if (weight >= resourceConfigures[id].weight) {
-                    _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
-                } else {
-                    _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
-                }
-                resourceConfigures[id].weight = weight;
-                resourceConfigures[id].pendingOP = OP.NO_PENDING;
-                emit ResourceChanged(id, weight, op);
-                return;
-            } else {
-                setPendingProp(id, op, weight);
-            }
+            setPendingProp(id, op, weight);
         } else if (op == OP.DELETE) {
             require(resources[resourceId] == id, 'resource id mismatch');
             require(id > FIRST_CONFIG_ID, 'can not delete default entry');
@@ -133,13 +126,14 @@ abstract contract AppConfig {
             pendingIdMap[id] = true;
             pendingIdArray.push(id);
         }
-        /*pending*/ //emit ResourceChanged(id, weight, op);
+        emit ResourcePending(id, weight, op);
     }
-    function setPendingProp(uint32 id, OP op_, uint32 weight_) internal {
+    function setPendingProp(uint32 id, OP op_, uint256 weight_) internal {
         resourceConfigures[id].pendingOP = op_;
         resourceConfigures[id].pendingWeight = weight_;
         resourceConfigures[id].submitSeconds = block.timestamp;
     }
+    /** Make the configuration that satisfies the delay mechanism take effect.  */
     function flushPendingConfig() public {
         _flushPendingConfig(pendingSeconds);
     }
@@ -147,7 +141,7 @@ abstract contract AppConfig {
         uint32[] memory newPendingArray;
         uint newIndex = 0;
         if (pendingIdArray.length == 0) {
-            revert("should not happen");
+            return;
         }
         for(uint i=pendingIdArray.length - 1; i >= 0; i--) {
             uint32 id = pendingIdArray[i];
@@ -159,7 +153,7 @@ abstract contract AppConfig {
                 continue;
             }
             OP op = config.pendingOP;
-            uint32 weight = config.pendingWeight;
+            uint256 weight = config.pendingWeight;
             if (op == OP.ADD) {
                 _mintConfig(address(this), id, weight, "add config");
                 config.weight = config.pendingWeight;

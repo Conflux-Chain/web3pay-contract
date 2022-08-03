@@ -1,6 +1,6 @@
 ## `AppConfig`
 
-Configuration functions for an App
+Configuration functions for an App.
 
 
 
@@ -25,11 +25,35 @@ Configuration functions for an App
 
 ### `configResource(struct AppConfig.ConfigRequest entry)` (public)
 
-
+There is a delayed execution mechanism when configuring resources.
 
 
 
 ### `_configResource(struct AppConfig.ConfigRequest entry)` (internal)
+
+
+
+
+
+### `setPendingProp(uint32 id, enum AppConfig.OP op_, uint32 weight_)` (internal)
+
+
+
+
+
+### `flushPendingConfig()` (public)
+
+Make the configuration that satisfies the delay mechanism take effect.
+
+
+
+### `_flushPendingConfig(uint256 pendingSeconds_)` (internal)
+
+
+
+
+
+### `listUserRequestCounter(address user, uint32[] ids) → uint256[] times` (public)
 
 
 
@@ -41,8 +65,26 @@ Configuration functions for an App
 
 
 
+### `_mintConfig(address to, uint256 id, uint256 amount, bytes data)` (internal)
+
+
+
+
+
+### `_burnConfig(address from, uint256 id, uint256 amount)` (internal)
+
+
+
+
+
 
 ### `ResourceChanged(uint32 id, uint32 weight, enum AppConfig.OP op)`
+
+
+
+
+
+### `ResourcePending(uint32 id, uint32 newWeight, enum AppConfig.OP op)`
 
 
 
@@ -59,6 +101,18 @@ uint32 weight
 
 
 uint32 index
+
+
+enum AppConfig.OP pendingOP
+
+
+uint32 pendingWeight
+
+
+uint256 submitSeconds
+
+
+uint256 requestTimes
 
 
 ### `ConfigRequest`
@@ -78,6 +132,12 @@ enum AppConfig.OP op
 
 
 ### `OP`
+
+
+
+
+
+
 
 
 

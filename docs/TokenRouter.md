@@ -17,8 +17,8 @@ Set baseToken. Cannot put it in constructor because subcontract may be proxyable
 ### `depositNativeValue(address swap, uint256 amountOut, address[] path, address toApp, uint256 deadline)` (public)
 
 Deposit native value, that is CFX on conflux chain.
-When depositing from Conflux Core space, the value sent must equal to amount needed by the swapping,
-otherwise the transaction will fail, because left value can not be send back.
+When depositing from Conflux Core space, the value sent should equal to amount needed by the swapping,
+otherwise left value will stay at the mapped account in eSpace, and can be withdraw through CrossSpaceCall.
 
 Parameters:
 - swap: Swapping contract address
@@ -26,6 +26,12 @@ Parameters:
 - path: Swapping path used by swapping contract. Generally, it's the address of [WCFX, baseToken]
 - toApp: deposit for which app
 - deadline: timestamp ( in seconds ) before which this transaction should be executed.
+
+
+
+### `safeTransferETH(address to, uint256 value)` (internal)
+
+
 
 
 
