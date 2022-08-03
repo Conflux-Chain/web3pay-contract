@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-/** Configuration functions for an App */
+/**
+ * Configuration functions for an App.
+ */
 abstract contract AppConfig {
     event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
     event ResourcePending(uint32 indexed id, uint32 indexed newWeight, OP indexed op);
@@ -67,6 +69,9 @@ abstract contract AppConfig {
         }
     }
 
+    /**
+     * There is a delayed execution mechanism when configuring resources.
+     */
     function configResource(ConfigRequest memory entry) public {
         _authorizeAppConfig();
         _configResource(entry);
@@ -128,6 +133,7 @@ abstract contract AppConfig {
         resourceConfigures[id].pendingWeight = weight_;
         resourceConfigures[id].submitSeconds = block.timestamp;
     }
+    /** Make the configuration that satisfies the delay mechanism take effect.  */
     function flushPendingConfig() public {
         _flushPendingConfig(pendingSeconds);
     }

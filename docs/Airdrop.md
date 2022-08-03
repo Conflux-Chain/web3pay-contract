@@ -24,7 +24,7 @@ Query user's balance, returns (total amount, airdrop amount)
 
 
 
-### `charge(address account, uint256 amount, bytes data)` (public)
+### `charge(address account, uint256 amount, bytes data, struct APPCoin.ResourceUseDetail[] useDetail)` (public)
 
 Charge account's quota.
 Will emit `Spend` event if airdrops are consumed.

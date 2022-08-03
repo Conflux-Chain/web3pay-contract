@@ -15,8 +15,9 @@
 |  ----|  ----  | ----  |
 | Provider|    |   |
 | | Create App  | [Controller](Controller.md) |
-| | Config/Query Resource  | [AppConfig](AppConfig.md) |
 | | Query Apps Created by someone  | [Controller](Controller.md) |
+| | Config/Query Resource, flushPendingConfig | [AppConfig](AppConfig.md) |
+| | setPendingSeconds   | [AppCoin](APPCoin.md) |
 | | Airdrop  | [Airdrop](Airdrop.md) |
 | Consumer|    |   |
 | | Query All App  | [Controller](Controller.md) |

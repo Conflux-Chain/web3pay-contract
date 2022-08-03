@@ -280,6 +280,10 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _burn(from,id,amount);
     }
 
+    /**
+     * In order to facilitate debugging, a delayed effective time interval can be set.
+     * It is required that the name of this contract is DO_NOT_DEPOSIT and the symbol is ALL_YOU_FUNDS_WILL_LOST.
+     */
     function setPendingSeconds(uint seconds_) public {
         require(hashCompareWithLengthCheck(name, "DO_NOT_DEPOSIT"), "only available on testnet");
         require(hashCompareWithLengthCheck(symbol, "ALL_YOU_FUNDS_WILL_LOST"), "only available on testnet~");
