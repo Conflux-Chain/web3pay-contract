@@ -194,7 +194,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(owner() == address(0), 'Owner exists');
         _transferOwnership(owner_);
     }
-    function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_, string memory uri_, uint32 defaultWeight) public onlyOwner{
+    function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_, string memory uri_, uint256 defaultWeight) public onlyOwner{
         require(apiCoin == address(0), 'Already initialized!');
 
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));

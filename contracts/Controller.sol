@@ -43,7 +43,7 @@ contract Controller is Ownable {
     * Set caller as `appOwner`.
     * There is a delayed execution mechanism when configuring resources. It is best to set default weights at creation time.
     */
-    function createApp(string memory name_, string memory symbol_, string memory description_, uint32 defaultWeight) public {
+    function createApp(string memory name_, string memory symbol_, string memory description_, uint256 defaultWeight) public {
         Airdrop app = Airdrop((address(new BeaconProxy(address(appBase), ""))));
         app.initOwner(address(this));
         app.init(api, msg.sender, name_, symbol_, description_, defaultWeight);
