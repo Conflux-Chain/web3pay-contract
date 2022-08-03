@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 /** Configuration functions for an App */
 abstract contract AppConfig {
     event ResourceChanged(uint32 indexed id, uint32 indexed weight, OP indexed op);
+    event ResourcePending(uint32 indexed id, uint32 indexed newWeight, OP indexed op);
     struct ConfigEntry {
         string resourceId;
         uint32 weight;
@@ -120,7 +121,7 @@ abstract contract AppConfig {
             pendingIdMap[id] = true;
             pendingIdArray.push(id);
         }
-        /*pending*/ //emit ResourceChanged(id, weight, op);
+        emit ResourcePending(id, weight, op);
     }
     function setPendingProp(uint32 id, OP op_, uint32 weight_) internal {
         resourceConfigures[id].pendingOP = op_;
