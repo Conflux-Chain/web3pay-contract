@@ -23,8 +23,8 @@ async function deploy(name:string,args: any[]) {
 }
 async function deployApp(name: string, args: any[]) {
   const app = await deploy(name, []).then(res=>res as APPCoin)
-  const [apiCoin,appOwner,name_,symbol] = args;
-  await app.init(apiCoin,appOwner,name_,symbol, "https://evm.confluxscan.net")
+  const [apiCoin,appOwner,name_,symbol, weight] = args;
+  await app.init(apiCoin,appOwner,name_,symbol, "https://evm.confluxscan.net", weight)
   return app;
 }
 async function deployProxy(name: string, args: any[]) {
@@ -47,7 +47,7 @@ async function deployAndDeposit(appOwner:SignerWithAddress, appTemplate="APPCoin
     api.address,
     ownerAddr, // set app owner
     "APP 1",
-    "APP1",
+    "APP1", 1,
   ])).connect(appOwner) as APPCoin;
   await api
       .depositToApp(appWithOwnerSet.address, { value: parseEther("1") })
@@ -65,7 +65,7 @@ describe("Controller", async function () {
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
     const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
 
-    const tx = controller.createApp("CoinA", "CA", "app description")
+    const tx = controller.createApp("CoinA", "CA", "app description", 1)
     await expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
     // @ts-ignore
     const createdAppAddr = (await (await tx).wait()).events?.filter(e=>e.event === controller.interface.events["APP_CREATED(address,address)"].name)
@@ -82,7 +82,7 @@ describe("Controller", async function () {
     expect(await app.name()).eq("CoinA")
     expect(await app.symbol()).eq("CA")
     // list created app
-    controller.createApp("CoinB", "CB", "app description").then(res=>res.wait())
+    controller.createApp("CoinB", "CB", "app description", 1).then(res=>res.wait())
     const [createdAppArr, total] = await controller.listAppByCreator(acc1, 0, 10)
     expect(createdAppArr.length).eq(2)
     expect(total).eq(2)
@@ -92,8 +92,8 @@ describe("Controller", async function () {
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
     const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
-    await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
-    await controller.createApp("app 2", "a2", "app description").then(tx=>tx.wait());
+    await controller.createApp("app 1", "a1", "app description", 1).then(tx=>tx.wait());
+    await controller.createApp("app 2", "a2", "app description", 2).then(tx=>tx.wait());
     const [arr, total] = await controller.listApp(0, 10);
     expect(arr.length).eq(2)
     expect(total).eq(2)
@@ -103,7 +103,7 @@ describe("Controller", async function () {
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
     const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
-    await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
+    await controller.createApp("app 1", "a1", "app description", 3).then(tx=>tx.wait());
     const api1addr = api.address
     const app1 = await controller.appMapping(0)
     const originApp1 = await attach("APICoin", api1addr) as APICoin
@@ -121,7 +121,7 @@ describe("Controller", async function () {
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
     const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
-    await controller.createApp("app 1", "a1", "app description").then(tx=>tx.wait());
+    await controller.createApp("app 1", "a1", "app description", 3).then(tx=>tx.wait());
 
     const app1addr = await controller.appMapping(0);
     const originApp1 = await attach("APPCoin", app1addr) as APPCoin
@@ -141,9 +141,11 @@ describe("Controller", async function () {
     expect(await appV2.version()).eq("App v2");
     expect(await originApp1.resourceConfigures(102).then(info=>info.pendingWeight)).eq(10)
     await expect(appV2.setPendingSeconds(0)).revertedWith(`only available on testnet`);
-    assert(await appV2.resourceConfigures(101).then(res=>res.pendingOP.toString()) == OP.PENDING_INIT_DEFAULT.toString(), `want PENDING_INIT_DEFAULT`)
+    let opFlag = await appV2.resourceConfigures(101).then(res=>res.pendingOP.toString());
+    assert(opFlag == OP.NO_PENDING.toString(),
+        `want NO_PENDING, actual ${opFlag}`)
     await appV2.configResource({id: 101, resourceId: 'default', weight: 101, op: OP.UPDATE}).then(tx=>tx.wait())
-    expect(await originApp1.resourceConfigures(101).then(info=>info.weight)).eq(101)
+    expect(await originApp1.resourceConfigures(101).then(info=>info.pendingWeight)).eq(101)
   })
 })
 describe("ApiCoin", async function () {
@@ -156,7 +158,7 @@ describe("ApiCoin", async function () {
       api.address,
       acc1,
       "APP 1",
-      "APP1",
+      "APP1", 1,
     ])) as APPCoin;
 
     expect(await app.apiCoin()).to.equal(api.address);
@@ -181,7 +183,7 @@ describe("ApiCoin", async function () {
       api.address,
       acc1,
       "DO_NOT_DEPOSIT",
-      "ALL_YOU_FUNDS_WILL_LOST",
+      "ALL_YOU_FUNDS_WILL_LOST", 1,
     ])) as APPCoin;
     // default resource weight 1, id 1, index 0
     let defaultConfig = await app.resourceConfigures(await app.FIRST_CONFIG_ID());
@@ -256,7 +258,7 @@ describe("ApiCoin", async function () {
       api.address,
       acc1,
       "APP 1",
-      "APP1",
+      "APP1", 1,
     ])) as APPCoin;
     await api
       .depositToApp(app.address, { value: parseEther("1") })
@@ -419,7 +421,7 @@ describe("ApiCoin", async function () {
       api.address,
       acc2, // set acc2 as app owner
       "APP 2",
-      "APP2",
+      "APP2", 1
     ])
     await api
         .depositToApp(appNew2.address, { value: parseEther("1") })

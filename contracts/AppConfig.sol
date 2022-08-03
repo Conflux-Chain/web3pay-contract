@@ -92,20 +92,7 @@ abstract contract AppConfig {
         } else if (op == OP.UPDATE) {
             require(id >= FIRST_CONFIG_ID, 'invalid id');
             require(resources[resourceId] == id, 'id/resourceId mismatch');
-            if(resourceConfigures[id].pendingOP == OP.PENDING_INIT_DEFAULT) {
-                // give only one chance to set the default weight directly (without delay execution).
-                if (weight >= resourceConfigures[id].weight) {
-                    _mintConfig(address(this), id, weight - resourceConfigures[id].weight, "update config");
-                } else {
-                    _burnConfig(address(this), id, resourceConfigures[id].weight - weight);
-                }
-                resourceConfigures[id].weight = weight;
-                resourceConfigures[id].pendingOP = OP.NO_PENDING;
-                emit ResourceChanged(id, weight, op);
-                return;
-            } else {
-                setPendingProp(id, op, weight);
-            }
+            setPendingProp(id, op, weight);
         } else if (op == OP.DELETE) {
             require(resources[resourceId] == id, 'resource id mismatch');
             require(id > FIRST_CONFIG_ID, 'can not delete default entry');
@@ -147,7 +134,7 @@ abstract contract AppConfig {
         uint32[] memory newPendingArray;
         uint newIndex = 0;
         if (pendingIdArray.length == 0) {
-            revert("should not happen");
+            return;
         }
         for(uint i=pendingIdArray.length - 1; i >= 0; i--) {
             uint32 id = pendingIdArray[i];
