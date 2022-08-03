@@ -4,13 +4,14 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
-import {APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
+import {Airdrop, APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
 import {attach, deploy, sleep, tokensNet71} from "./lib";
 
 async function main() {
-  await upgradeApp()
+  // await upgradeApp()
+  await deployIt()
 }
 async function deployIt() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -37,12 +38,15 @@ async function deployIt() {
   const apiProxy = await deploy("ERC1967Proxy", [apiImpl.address, initReq.data]) as ERC1967Proxy
   const api = await attach("APICoin", apiProxy.address) as APICoin
 
-  const controller = await deploy("Controller", [api!.address]) as Controller;
+  const appImpl = await deploy("Airdrop", []) as Airdrop;
+  const appBase = await deploy("UpgradeableBeacon", [appImpl.address]) as UpgradeableBeacon;
+
+  const controller = await deploy("Controller", [api!.address, appBase!.address]) as Controller;
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com").then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
 
-  let appBase = await controller.appBase();
-  const appBeacon = await attach("UpgradeableBeacon", appBase) as UpgradeableBeacon
+  // let appBase = await controller.appBase();
+  const appBeacon = await attach("UpgradeableBeacon", appBase!.address) as UpgradeableBeacon
   console.log(`app base(UpgradeableBeacon) at ${appBase}`)
   let appImplStub = await appBeacon.implementation();
   console.log(`app impl at ${appImplStub}`)
@@ -64,7 +68,7 @@ async function deployProxy(name: string, args: any[]) {
 
 async function upgradeApp() {
   const newAppImpl = await deploy("Airdrop", [])
-  const beacon = await attach("UpgradeableBeacon", "0x880b7967d87eb1ea5bf0a5fbeb5f6cf371e43816") as UpgradeableBeacon
+  const beacon = await attach("UpgradeableBeacon", "0xde63bf7ee5685da53c39e92388131e2810f1a98e") as UpgradeableBeacon
   const receipt = await beacon.upgradeTo(newAppImpl?.address!).then(tx=>tx.wait())
   console.log(`upgraded to ${newAppImpl?.address}, tx ${receipt.transactionHash}`)
 }
