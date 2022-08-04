@@ -164,10 +164,10 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _withdraw(account, "app owner refund");
     }
     function _withdraw(address account, bytes memory reason) internal {
-        uint256 appCoinLeft = balanceOf(msg.sender, FT_ID);
+        uint256 appCoinLeft = balanceOf(account, FT_ID);
         _burn(account, FT_ID, appCoinLeft);
         IERC777(apiCoin).send(account, appCoinLeft, reason);
-        delete frozenMap[msg.sender];
+        delete frozenMap[account];
         emit Withdraw(account, appCoinLeft);
     }
     // -------- app owner operation -----------

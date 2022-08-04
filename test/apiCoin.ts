@@ -329,7 +329,18 @@ describe("ApiCoin", async function () {
       .emit(api, api.interface.events["Transfer(address,address,uint256)"].name)
       .withArgs(app.address, acc1, parseEther("1"));
     expect(await app.balanceOf(acc1, 0)).eq(0);
+  })
+  it("provider refund", async function () {
+    const {api: api1, app, app2} = await deployAndDeposit(signer1);
+    //
+    const api = await api1.connect(signer3)
+    await api.depositToApp(app.address, {value: parseEther("3")}).then(tx=>tx.wait())
+    const b2 = await app.balanceOf(acc3, 0)
+    assert(b2.eq(parseEther("3")), `balance should be 3, actual ${b2}`);
 
+    await app.refund(acc3).then(tx=>tx.wait())
+    const b3 = await app.balanceOf(acc3, 0)
+    assert(b3.eq(parseEther("0")), `balance should be 0, actual ${b3}`);
   });
   it("track charged users", async () => {
     const {api, app:appOwnerAcc2, app2:appSigner1} = await deployAndDeposit(signer2);
