@@ -14,17 +14,16 @@ import "./AppConfig.sol";
 
 /** @dev Settlement contract between API consumer and API supplier.
  *
- * For Api supplier:
+ * For Api provider:
  * - setResourceWeightBatch
  * - setResourceWeight
  * - charge
- * - freeze
+ * - refund
  * - takeProfit
  *
  * For api consumer:
  * - withdrawRequest
  * - forceWithdraw
- * - freeze
  */
 contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IERC1155Receiver {
     bytes32 private constant _TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
@@ -154,16 +153,22 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         frozenMap[msg.sender] = block.number;
         emit Frozen(msg.sender);
     }
-    /** @dev After some time, user can force withdraw his funds anyway. */
+    /** @dev After the delay time expires, the user can withdraw the remaining funds. */
     function forceWithdraw() public whenNotPaused {
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
         require(block.number - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
+        _withdraw(msg.sender, "force withdraw");
+    }
+    function refund(address account) public onlyAppOwner {
+        _withdraw(account, "app owner refund");
+    }
+    function _withdraw(address account, bytes memory reason) internal {
         uint256 appCoinLeft = balanceOf(msg.sender, FT_ID);
-        _burn(msg.sender, FT_ID, appCoinLeft);
-        IERC777(apiCoin).send(msg.sender, appCoinLeft, "force withdraw");
+        _burn(account, FT_ID, appCoinLeft);
+        IERC777(apiCoin).send(account, appCoinLeft, reason);
         delete frozenMap[msg.sender];
-        emit Withdraw(msg.sender, appCoinLeft);
+        emit Withdraw(account, appCoinLeft);
     }
     // -------- app owner operation -----------
     function setForceWithdrawDelay(uint256 delay) public onlyAppOwner whenNotPaused{

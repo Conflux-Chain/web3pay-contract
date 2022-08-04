@@ -43,13 +43,13 @@ async function deployIt() {
 
   const controller = await deploy("Controller", [api!.address, appBase!.address]) as Controller;
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com",
-      ethers.utils.parseEther("0.03"))
+      ethers.utils.parseEther("0.003"))
       .then(tx=>tx.wait())
   console.log(`create new app ${await controller.appMapping(0)}`)
 
   // let appBase = await controller.appBase();
   const appBeacon = await attach("UpgradeableBeacon", appBase!.address) as UpgradeableBeacon
-  console.log(`app base(UpgradeableBeacon) at ${appBase}`)
+  console.log(`app base(UpgradeableBeacon) at ${appBase.address}`)
   let appImplStub = await appBeacon.implementation();
   console.log(`app impl at ${appImplStub}`)
 

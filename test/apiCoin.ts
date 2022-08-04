@@ -187,7 +187,7 @@ describe("ApiCoin", async function () {
     ])) as APPCoin;
     // default resource weight 1, id 1, index 0
     let defaultConfig = await app.resourceConfigures(await app.FIRST_CONFIG_ID());
-    assert(defaultConfig.weight == 1,`default weight should be 1 vs ${defaultConfig.weight}`)
+    assert(defaultConfig.weight.toNumber() == 1,`default weight should be 1 vs ${defaultConfig.weight}`)
     assert(defaultConfig.resourceId == 'default','default resourceId should be <default>')
     assert(defaultConfig.index == 0,'default resource index should be 0')
     // add new one, auto id 2, index 1
@@ -204,7 +204,7 @@ describe("ApiCoin", async function () {
     await app.configResource({id: 102, resourceId: "path2", weight:200, op: OP.UPDATE})
         .then(tx=>tx.wait())
     config2 = await app.resourceConfigures(102)
-    assert(config2.pendingWeight == 200, 'pending weight should be updated')
+    assert(config2.pendingWeight.toNumber() == 200, 'pending weight should be updated')
     assert(config2.index == 1, 'index should be 1')
 
     // id mismatch resource id
@@ -238,7 +238,7 @@ describe("ApiCoin", async function () {
     assert(list.length == 4, `should have 4 items, actual ${list.length}`);
     const [,,[path, w, index, pendingOP]] = list;
     assert(path == 'p5', 'resource id should be right')
-    assert(w == 105, 'weight should be right')
+    assert(w.toNumber() == 105, 'weight should be right')
     assert(index == 2, `index should be right, ${index} vs 3 `)
     assert(pendingOP.toString() == OP.NO_PENDING.toString(), `want no pending, ${pendingOP} vs ${OP.NO_PENDING} `)
 
@@ -290,6 +290,9 @@ describe("ApiCoin", async function () {
 
     await expect(app2.configResource({id:0, resourceId:"p0", weight:10, op:OP.ADD})).to.be.revertedWith(
       `not app owner`
+    );
+    await expect(app2.refund(app2.address)).to.be.revertedWith(
+        `not app owner`
     );
     // app2
     //   .transfer(api.address, parseEther("2"))
