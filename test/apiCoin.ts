@@ -294,6 +294,9 @@ describe("ApiCoin", async function () {
     await expect(app2.refund(app2.address)).to.be.revertedWith(
         `not app owner`
     );
+    await expect(app2.transferAppOwner(app2.address, ethers.constants.AddressZero)).to.be.revertedWith(
+        `not app owner`
+    );
     // app2
     //   .transfer(api.address, parseEther("2"))
     //   .then((res) => res.wait())
@@ -301,6 +304,39 @@ describe("ApiCoin", async function () {
     //     console.log(`transfer fail:`, err);
     //   });
   });
+  it("transfer app owner", async function () {
+    const appImpl = await deploy("Airdrop", []) as Airdrop;
+    const appBase = await deploy("UpgradeableBeacon", [appImpl.address]) as UpgradeableBeacon;
+    const controller = await deploy("Controller", [acc1, appBase.address]) as Controller;
+    // create apps
+    await Promise.all([1,2,3].map(i=>controller.createApp(i.toString(), "", "", i)))
+    const [apps, total] = await controller.listAppByCreator(acc1, 0, 10)
+    assert(apps.length == 3, `should be 3 apps, actual ${apps.length}`)
+    {// transfer app3 to acc3
+      const app3 = await attach("Airdrop", apps[2].addr) as Airdrop;
+      await app3.transferAppOwner(acc3, controller.address).then(tx => tx.wait())
+      await app3.appOwner().then(owner => {
+        assert(owner == acc3, `owner of app3 should be ${acc3}, actual ${owner}`)
+      })
+      const [appsAcc1, totalAcc1] = await controller.listAppByCreator(acc1, 0, 10)
+      assert(appsAcc1.length == 2, `want length 2 vs ${appsAcc1.length}`)
+      const [appsAcc3, totalAcc3] = await controller.listAppByCreator(acc3, 0, 10)
+      assert(appsAcc3.length == 1, `want length 2 vs ${appsAcc3.length}`)
+    }
+    // transfer app1 to acc3; test case moving last one to right position
+    {
+      const app1 = await attach("Airdrop", apps[0].addr) as Airdrop;
+      await app1.transferAppOwner(acc3, controller.address).then(tx => tx.wait())
+      await app1.appOwner().then(owner => {
+        assert(owner == acc3, `owner of app1 should be ${acc3}, actual ${owner}`)
+      })
+      const [appsAcc1, totalAcc1] = await controller.listAppByCreator(acc1, 0, 10)
+      assert(appsAcc1.length == 1, `want length 1 vs ${appsAcc1.length}`)
+      assert(appsAcc1[0].addr == apps[1].addr, `want addr ${apps[1].addr} vs ${appsAcc1[0].addr}`)
+      const [appsAcc3, totalAcc3] = await controller.listAppByCreator(acc3, 0, 10)
+      assert(appsAcc3.length == 2, `want length 2 vs ${appsAcc3.length}`)
+    }
+  })
   it("withdraw", async function () {
     const {api, app, app2} = await deployAndDeposit(signer1);
     // freeze acc1 by admin

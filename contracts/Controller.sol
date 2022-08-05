@@ -37,6 +37,33 @@ contract Controller is Ownable {
         appBase = appBase_;
         api = api_;
     }
+    function changeAppOwner(address from, address to) external {
+        address app = msg.sender;
+        AppInfo[] storage ownedApps = creatorAppTrack[from];
+        // find app
+        uint pos = 0;
+        bool find = false;
+        AppInfo memory appInfo;
+        for(uint i=0; i<ownedApps.length; i++) {
+            if (ownedApps[i].addr == app) {
+                pos = i;
+                find = true;
+                appInfo = ownedApps[i];
+                break;
+            }
+        }
+        if (!find) {
+            revert("App not found");
+        }
+        // move last one to current
+        AppInfo memory last = ownedApps[ownedApps.length - 1];
+        ownedApps.pop();
+        if (last.addr != app) {
+            ownedApps[pos] = last;
+        }
+        // append to `to`
+        creatorAppTrack[to].push(appInfo);
+    }
     /**
     * @dev Create/register a DApp.
     * Will deploy an ERC777 contract, then use it as a settlement contract between API consumer and API supplier.
