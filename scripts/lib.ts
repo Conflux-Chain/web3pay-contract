@@ -1,4 +1,7 @@
 import {ethers} from "hardhat";
+import {ContractTransaction} from "ethers";
+import {formatEther, parseEther} from "ethers/lib/utils";
+import {IERC20} from "../typechain";
 export const tokensNet71 = {
 	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
 	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
@@ -10,6 +13,32 @@ export const tokensNet71 = {
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)
+}
+export async function approveERC20(token:string, to:string, amount:string) {
+	const template = await ethers.getContractFactory([
+		"function approve(address to, uint amount) public",
+		"function name() public view returns (string)",
+	], '0x');
+	const contract = await template.attach(token) as IERC20
+	await contract.approve(to, parseEther(amount)).then(tx=>tx.wait());
+	console.log(`approve ${await (contract as any)['name']()} ${token} to ${to} x ${amount}`)
+}
+export async function mintERC20(token:string, to:string, amount:string) {
+	const template = await ethers.getContractFactory([
+		"function mint(address to, uint amount) public",
+		"function name() public view returns (string)",
+	], '0x');
+	const contract = await template.attach(token)
+	await contract['mint'](to, parseEther(amount)).then((tx:ContractTransaction)=>tx.wait())
+	console.log(`mint ${await contract['name']()} ${token} to ${to} x ${amount}`)
+}
+export async function networkInfo() {
+	const [signer] = await ethers.getSigners()
+	const acc1 = signer.address
+
+	let network = await ethers.provider.getNetwork();
+	console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, network)
+	return {signer, account: acc1}
 }
 export function getDeadline(diff: number = 1000) {
 	return Math.round(Date.now()/1000 ) + diff

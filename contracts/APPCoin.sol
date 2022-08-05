@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
 import "./AppConfig.sol";
+import "./IAPPCoin.sol";
 
 /** @dev Settlement contract between API consumer and API supplier.
  *
@@ -30,6 +31,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     IERC1820Registry internal constant _ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     address public apiCoin;
     address public appOwner;
+    event AppOwnerChanged(address indexed to);
     string public name;
     string public symbol;
     modifier onlyAppOwner() {
@@ -96,6 +98,11 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     /**
     * @dev Freeze/Unfreeze an account.
     */
+    function transferAppOwner(address to, address controller) public onlyAppOwner {
+        IController(controller).changeAppOwner(appOwner, to);
+        appOwner = to;
+        emit AppOwnerChanged(to);
+    }
     function freeze(address acc, bool f) public {
         require(msg.sender == appOwner || msg.sender == owner(), 'Unauthorised');
         if (f) {
@@ -208,6 +215,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _setURI(uri_);
         apiCoin = apiCoin_;
         appOwner = appOwner_;
+        emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
         nextConfigId = FIRST_CONFIG_ID;
         ConfigRequest memory request = ConfigRequest(0, "default", defaultWeight, OP.ADD);
@@ -262,11 +270,14 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         string memory _desc = super.uri(tokenId);
         string memory json;
         string memory output;
-        json = Base64.encode(bytes(string(abi.encodePacked("{\"name\":\"",_name,"\",\"description\":\"",_desc,"\"}"))));
+        json = Base64.encode(bytes(string(abi.encodePacked("{\"name\":\"",_name,"\",\"image\":\"/favicon.ico\",\"description\":\"",_desc,"\"}"))));
         output = string(
             abi.encodePacked("data:application/json;base64,", json)
         );
         return output;
+    }
+    function decimals() public pure virtual returns (uint8) {
+        return 18;
     }
 
     function _mintConfig(
