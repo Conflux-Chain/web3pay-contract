@@ -28,7 +28,7 @@ async function test(tokens: any) {
 	const baseToken = tokens.usdt;
 	// const myRouter = await deploy("TokenRouter", []) as TokenRouter;
 	// await myRouter.initTokenRouter(baseToken).then(waitTx);
-	const myRouter = await ethers.getContractAt("TokenRouter", "0xbb0086bddb7816696922a1f711ba68a9e4918767") as TokenRouter;
+	const myRouter = await ethers.getContractAt("TokenRouter", "0x1F0eE460DE6d0d4733308077487B0551f818CdD2") as TokenRouter;
 	const testApp = '0xe15b9df25e55185b0faba9804cc3026879e5ef05';
 	const swapRouter = tokens.__router //
 	const path = [
@@ -36,9 +36,9 @@ async function test(tokens: any) {
 	]
 	const base20 = await ethers.getContractAt("IERC20", baseToken) as IERC20;
 	const swap = await ethers.getContractAt("ISwap", swapRouter) as ISwap;
-	// await depositTokens(swap, tokens, myRouter, path, testApp, base20);
+	await depositTokens(swap, tokens, myRouter, path, testApp, base20);
 	// await withdraw(swap, tokens, myRouter, baseToken, testApp, base20);
-	await depositNative(swap, tokens, myRouter, swapRouter, testApp, base20);
+	// await depositNative(swap, tokens, myRouter, swapRouter, testApp, base20);
 }
 async function depositTokens(swap:ISwap, tokens:any, myRouter:TokenRouter, path:string[], testApp: string, base20: IERC20) {
 	const swapRouter = tokens.__router //
@@ -52,6 +52,12 @@ async function depositTokens(swap:ISwap, tokens:any, myRouter:TokenRouter, path:
 	await base20.approve(myRouter.address, parseEther("1")).then(waitTx)
 	await myRouter.depositBaseToken(parseEther("1"), testApp).then(waitTx)
 	console.log(`depositBaseToken. done`)
+
+	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
+	console.log(`approved`)
+	await myRouter.swapTokensForExactBaseTokens(swapRouter, parseEther("1"),
+		parseEther("1"), path, testApp, getDeadline()).then(tx => tx.wait())
+	console.log(`swapTokensForExactBaseTokens ok`)
 }
 async function withdraw(swap:ISwap, tokens:any, myRouter:TokenRouter, baseToken:string, testApp: string, base20: IERC20) {
 	const dApp = await attach("APPCoin", testApp) as APPCoin;
