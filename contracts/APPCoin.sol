@@ -262,11 +262,14 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         string memory _desc = super.uri(tokenId);
         string memory json;
         string memory output;
-        json = Base64.encode(bytes(string(abi.encodePacked("{\"name\":\"",_name,"\",\"description\":\"",_desc,"\"}"))));
+        json = Base64.encode(bytes(string(abi.encodePacked("{\"name\":\"",_name,"\",\"image\":\"/favicon.ico\",\"description\":\"",_desc,"\"}"))));
         output = string(
             abi.encodePacked("data:application/json;base64,", json)
         );
         return output;
+    }
+    function decimals() public pure virtual returns (uint8) {
+        return 18;
     }
 
     function _mintConfig(

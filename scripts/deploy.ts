@@ -7,12 +7,40 @@ import {ethers, upgrades} from "hardhat";
 import {Airdrop, APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
-import {attach, deploy, sleep, tokensNet71} from "./lib";
+import {approveERC20, attach, deploy, getDeadline, mintERC20, networkInfo, sleep, tokensNet71} from "./lib";
+import {ContractTransaction} from "ethers";
 
 async function main() {
   // await upgradeApp()
-  await deployIt()
+  // await deployIt()
+  await deposit()
 }
+
+async function deposit() {
+  const  {signer, account:acc1} = await networkInfo()
+  const tokens = tokensNet71;
+
+  const newApp = "0x51292be1e399469398fe046fd8406c378e2ce7a1"
+  const app = await attach("Airdrop", newApp) as Airdrop
+  const apiAddr = await app.apiCoin()
+  const api = await attach("APICoin", apiAddr) as APICoin;
+  const baseToken = await api.baseToken()
+
+  await mintERC20(tokens.btc, acc1, "1")
+  await approveERC20(tokens.btc, api.address, "1")
+  await api.depositWithSwap(tokens.__router, parseEther("1"), 0, [tokens.btc, baseToken], newApp, getDeadline()).then(tx => tx.wait())
+  console.log(`depositWithSwap done`)
+
+  await mintERC20(baseToken, acc1, "2")
+  await approveERC20(baseToken, api.address, "2")
+  await api.depositBaseToken(parseEther("2"), newApp).then(tx => tx.wait())
+  console.log(`depositBaseToken done`)
+
+  await api.depositNativeValue(tokens.__router, parseEther("0.03"), [tokens.wcfx, baseToken], newApp, getDeadline()
+    , {value: parseEther("1")}).then(tx=>tx.wait())
+  console.log(`depositNativeValue done`)
+}
+
 async function deployIt() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -20,10 +48,7 @@ async function deployIt() {
   // If this script is run directly using `node` you may want to call compile
   // manually to make sure everything is compiled
   // await hre.run('compile');
-  const [signer] = await ethers.getSigners()
-  const acc1 = signer.address
-  let network = await ethers.provider.getNetwork();
-  console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, network)
+  await networkInfo()
   let tokens = tokensNet71;
   let baseToken = tokens.usdt;
 
@@ -45,7 +70,8 @@ async function deployIt() {
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com",
       ethers.utils.parseEther("0.003"))
       .then(tx=>tx.wait())
-  console.log(`create new app ${await controller.appMapping(0)}`)
+  let newApp = await controller.appMapping(0);
+  console.log(`create new app ${newApp}`)
 
   // let appBase = await controller.appBase();
   const appBeacon = await attach("UpgradeableBeacon", appBase!.address) as UpgradeableBeacon
@@ -59,7 +85,6 @@ async function deployIt() {
   await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
   await verifyContract("Airdrop", appImplStub).catch(err=>console.log(`verify contract fail ${err}`))
 }
-
 async function deployProxy(name: string, args: any[]) {
   const template = await ethers.getContractFactory(name);
   const proxy = await upgrades.deployProxy(template, args);
