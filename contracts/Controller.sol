@@ -37,6 +37,7 @@ contract Controller is Ownable {
         appBase = appBase_;
         api = api_;
     }
+    /* Must be called from app contract. */
     function changeAppOwner(address from, address to) external {
         address app = msg.sender;
         AppInfo[] storage ownedApps = creatorAppTrack[from];
