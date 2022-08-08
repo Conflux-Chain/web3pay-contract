@@ -12,6 +12,14 @@ interface ISwap {
         uint deadline
     ) external returns (uint[] memory amounts);
 
+    function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+
     /**
      * An important difference here: the cost of native value will be dynamically calculated through function `getAmountsIn`.
      * Exceeded value will be send back to the caller.
@@ -99,6 +107,26 @@ contract TokenRouter {
         IERC20(path[0]).transferFrom(msg.sender, address(this), amountIn);
         IERC20(path[0]).approve(swap, amountIn);
         uint[] memory amounts = ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), deadline);
+        _checkSwapResultAndMint(amounts, balance0, toApp);
+    }
+    /** swapTokensForExactBaseTokens, call swap.swapTokensForExactTokens() */
+    function swapTokensForExactBaseTokens(address swap,
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address toApp,
+        uint deadline) public {
+        uint balance0 = IERC20(baseToken).balanceOf(address(this));
+
+        // swapping should end with baseToken
+        require(path[path.length-1] == baseToken, 'invalid path');
+
+        uint[] memory amountsIn = ISwap(swap).getAmountsIn(amountOut, path);
+        require(amountsIn[0] <= amountInMax, 'TokenRouter: EXCESSIVE_INPUT_AMOUNT');
+
+        IERC20(path[0]).transferFrom(msg.sender, address(this), amountsIn[0]);
+        IERC20(path[0]).approve(swap, amountsIn[0]);
+        uint[] memory amounts = ISwap(swap).swapTokensForExactTokens(amountOut, amountsIn[0], path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
     }
 
