@@ -63,7 +63,7 @@ describe("Controller", async function () {
     const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
-    const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
+    const controller = await deployProxy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
 
     const tx = controller.createApp("CoinA", "CA", "app description", 1)
     await expect(tx).emit(controller, controller.interface.events["APP_CREATED(address,address)"].name);
@@ -91,7 +91,7 @@ describe("Controller", async function () {
   it("list created app", async function (){
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
-    const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
+    const controller = await deployProxy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description", 1).then(tx=>tx.wait());
     await controller.createApp("app 2", "a2", "app description", 2).then(tx=>tx.wait());
     const [arr, total] = await controller.listApp(0, 10);
@@ -102,7 +102,7 @@ describe("Controller", async function () {
     const api = await deployProxy("APICoin", ["main coin", "mc", baseToken, []]) as APICoin
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
-    const controller = await deploy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
+    const controller = await deployProxy("Controller", [api.address, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description", 3).then(tx=>tx.wait());
     const api1addr = api.address
     const app1 = await controller.appMapping(0)
@@ -120,7 +120,7 @@ describe("Controller", async function () {
   it("upgrade app, beacon", async function (){
     const app_ = await deploy("Airdrop", []) as Airdrop
     const appBeacon = await deploy("UpgradeableBeacon", [app_.address]) as UpgradeableBeacon;
-    const controller = await deploy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
+    const controller = await deployProxy("Controller", [ethers.constants.AddressZero, appBeacon.address]).then(res=>res as Controller);
     await controller.createApp("app 1", "a1", "app description", 3).then(tx=>tx.wait());
 
     const app1addr = await controller.appMapping(0);
@@ -307,7 +307,7 @@ describe("ApiCoin", async function () {
   it("transfer app owner", async function () {
     const appImpl = await deploy("Airdrop", []) as Airdrop;
     const appBase = await deploy("UpgradeableBeacon", [appImpl.address]) as UpgradeableBeacon;
-    const controller = await deploy("Controller", [acc1, appBase.address]) as Controller;
+    const controller = await deployProxy("Controller", [acc1, appBase.address]) as Controller;
     // create apps
     await Promise.all([1,2,3].map(i=>controller.createApp(i.toString(), "", "", i)))
     const [apps, total] = await controller.listAppByCreator(acc1, 0, 10)

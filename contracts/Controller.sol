@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 import "./Airdrop.sol";
 /**
@@ -15,7 +17,7 @@ import "./Airdrop.sol";
 * An ERC777 contract will be deployed, which then will be used as a settlement contract between API consumer and API supplier.
 */
 
-contract Controller is Ownable {
+contract Controller is OwnableUpgradeable, UUPSUpgradeable {
     address public appBase;
     address public api;
     /** @dev APP_CREATED event */
@@ -29,11 +31,13 @@ contract Controller is Ownable {
     }
     mapping(address=>AppInfo[]) creatorAppTrack;
 
-    constructor (address api_, address appBase_){
-//        Airdrop appImpl = new Airdrop();
-//        UpgradeableBeacon appUpgradeableBeacon = new UpgradeableBeacon(address(appImpl));
-//        appUpgradeableBeacon.transferOwnership(msg.sender);
-//        appBase = address(appUpgradeableBeacon);
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor () {
+        _disableInitializers();
+    }
+    function initialize(address api_, address appBase_) initializer public {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
         appBase = appBase_;
         api = api_;
     }
@@ -112,5 +116,11 @@ contract Controller is Ownable {
         }
         return (arr, nextId);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+    internal
+    onlyOwner
+    override
+    {}
 }
 // reference to: https://forum.openzeppelin.com/t/how-to-deploy-new-instances-using-beacon-proxy-from-a-factory-when-using-openzeppelin-hardhat-upgrades/27801/5
