@@ -9,11 +9,14 @@ const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
 import {approveERC20, attach, deploy, getDeadline, mintERC20, networkInfo, sleep, tokensNet71} from "./lib";
 import {ContractTransaction} from "ethers";
+import * as fs from "fs";
+
+let deployInfoFile = `./artifacts/deployInfo.json`;
 
 async function main() {
   // await upgradeApp()
-  // await deployIt()
-  await deposit()
+  await deployIt()
+  // await deposit()
 }
 
 async function deposit() {
@@ -66,7 +69,12 @@ async function deployIt() {
   const appImpl = await deploy("Airdrop", []) as Airdrop;
   const appBase = await deploy("UpgradeableBeacon", [appImpl.address]) as UpgradeableBeacon;
 
-  const controller = await deploy("Controller", [api!.address, appBase!.address]) as Controller;
+  const controllerImpl = await deploy("Controller", []) as Controller;
+  const tmpController = await attach("Controller", ethers.constants.AddressZero) as Controller;
+  const cInitReq = await tmpController.populateTransaction.initialize(api!.address, appBase!.address);
+  const cProxy = await deploy("ERC1967Proxy", [controllerImpl.address, cInitReq.data]) as ERC1967Proxy
+  const controller = await attach("Controller", cProxy.address) as Controller;
+
   await controller.createApp(`TestApp ${dateStr}`, `T${dateStr}`, "https://test.app.com",
       ethers.utils.parseEther("0.003"))
       .then(tx=>tx.wait())
@@ -78,11 +86,16 @@ async function deployIt() {
   console.log(`app base(UpgradeableBeacon) at ${appBase.address}`)
   let appImplStub = await appBeacon.implementation();
   console.log(`app impl at ${appImplStub}`)
-
+  const deployInfo = {
+    apiImpl: apiImpl.address, apiProxy: api.address,
+    appImpl: apiImpl.address, appBeaconBase: appBase.address,
+    controllerImpl: controllerImpl.address, controllerProxy: controller.address,
+  }
+  await fs.writeFileSync(deployInfoFile, JSON.stringify(deployInfo, null, 4))
   console.log(`wait before verifying...`)
   await sleep(10_000)
   await verifyContract("APICoin", apiImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
-  await verifyContract("Controller", controller.address).catch(err=>console.log(`verify contract fail ${err}`))
+  await verifyContract("Controller", controllerImpl.address).catch(err=>console.log(`verify contract fail ${err}`))
   await verifyContract("Airdrop", appImplStub).catch(err=>console.log(`verify contract fail ${err}`))
 }
 async function deployProxy(name: string, args: any[]) {
