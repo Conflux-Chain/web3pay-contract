@@ -1,5 +1,9 @@
+/**
+ * Swapping depends on some contracts that don't exist on testsuite.
+ * Use this to test on testnet where swapping contracts exist.
+ */
 import {ethers, upgrades} from "hardhat";
-import {attach, deploy, getDeadline, tokensNet71, waitTx} from "./lib";
+import {attach, deploy, depositTokens, getDeadline, tokensNet71, waitTx} from "./lib";
 import {APPCoin, IERC20, ISwap, TokenRouter} from "../typechain";
 import {formatEther, parseEther} from "ethers/lib/utils";
 let acc1 = ''
@@ -35,30 +39,11 @@ async function test(tokens: any) {
 		tokens.btc, baseToken,
 	]
 	const base20 = await ethers.getContractAt("IERC20", baseToken) as IERC20;
-	const swap = await ethers.getContractAt("ISwap", swapRouter) as ISwap;
-	await depositTokens(swap, tokens, myRouter, path, testApp, base20);
+	await depositTokens(tokens, myRouter, path, testApp, base20);
 	// await withdraw(swap, tokens, myRouter, baseToken, testApp, base20);
 	// await depositNative(swap, tokens, myRouter, swapRouter, testApp, base20);
 }
-async function depositTokens(swap:ISwap, tokens:any, myRouter:TokenRouter, path:string[], testApp: string, base20: IERC20) {
-	const swapRouter = tokens.__router //
 
-	const useToken = await ethers.getContractAt("IERC20", path[0]) as IERC20;
-	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
-	console.log(`approved`)
-	await myRouter.depositWithSwap(swapRouter, parseEther("1"), 0, path, testApp, getDeadline()).then(tx => tx.wait())
-	console.log(`depositWithSwap ok`)
-	//
-	await base20.approve(myRouter.address, parseEther("1")).then(waitTx)
-	await myRouter.depositBaseToken(parseEther("1"), testApp).then(waitTx)
-	console.log(`depositBaseToken. done`)
-
-	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
-	console.log(`approved`)
-	await myRouter.swapTokensForExactBaseTokens(swapRouter, parseEther("1"),
-		parseEther("1"), path, testApp, getDeadline()).then(tx => tx.wait())
-	console.log(`swapTokensForExactBaseTokens ok`)
-}
 async function withdraw(swap:ISwap, tokens:any, myRouter:TokenRouter, baseToken:string, testApp: string, base20: IERC20) {
 	const dApp = await attach("APPCoin", testApp) as APPCoin;
 	if (await dApp.frozenMap(acc1).then(flag=>flag.eq(0))) {

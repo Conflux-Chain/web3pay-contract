@@ -4,44 +4,55 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
-import {Airdrop, APICoin, Controller, ERC1967Proxy, UpgradeableBeacon} from "../typechain";
+import {Airdrop, APICoin, Controller, ERC1967Proxy, IERC20, ISwap, TokenRouter, UpgradeableBeacon} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
-import {approveERC20, attach, deploy, getDeadline, mintERC20, networkInfo, sleep, tokensNet71} from "./lib";
+import {
+  approveERC20,
+  attach,
+  deploy,
+  depositTokens,
+  getDeadline,
+  mintERC20,
+  networkInfo,
+  sleep,
+  tokensNet71
+} from "./lib";
 import {ContractTransaction} from "ethers";
 import * as fs from "fs";
 
-let deployInfoFile = `./artifacts/deployInfo.json`;
+let deployInfoFile = `./artifacts/deployInfo.json.txt`;
 
 async function main() {
   // await upgradeApp()
-  await deployIt()
-  // await deposit()
+  // await deployIt()
+  await depositForLatestApp()
 }
 
-async function deposit() {
+async function depositForLatestApp() {
+  const deployInfoStr = fs.readFileSync(deployInfoFile).toString();
+  const deployInfo = JSON.parse(deployInfoStr)
+  let controllerAddr = deployInfo['controllerProxy'];
+  console.log(`user controller ${controllerAddr}`)
+  const controller = await attach("Controller", controllerAddr) as Controller;
+  const [apps, total] = await controller.listApp(0, 1_000)
+  const latest = apps[total.toNumber() - 1]
+  console.log(`deposit to app ${latest}`)
+  await deposit(latest);
+}
+async function deposit(newApp: string) {
   const  {signer, account:acc1} = await networkInfo()
   const tokens = tokensNet71;
 
-  const newApp = "0x51292be1e399469398fe046fd8406c378e2ce7a1"
   const app = await attach("Airdrop", newApp) as Airdrop
   const apiAddr = await app.apiCoin()
   const api = await attach("APICoin", apiAddr) as APICoin;
   const baseToken = await api.baseToken()
-
-  await mintERC20(tokens.btc, acc1, "1")
-  await approveERC20(tokens.btc, api.address, "1")
-  await api.depositWithSwap(tokens.__router, parseEther("1"), 0, [tokens.btc, baseToken], newApp, getDeadline()).then(tx => tx.wait())
-  console.log(`depositWithSwap done`)
-
-  await mintERC20(baseToken, acc1, "2")
-  await approveERC20(baseToken, api.address, "2")
-  await api.depositBaseToken(parseEther("2"), newApp).then(tx => tx.wait())
-  console.log(`depositBaseToken done`)
-
-  await api.depositNativeValue(tokens.__router, parseEther("0.03"), [tokens.wcfx, baseToken], newApp, getDeadline()
-    , {value: parseEther("1")}).then(tx=>tx.wait())
-  console.log(`depositNativeValue done`)
+  const path = [
+    tokens.btc, baseToken,
+  ]
+  const base20 = await ethers.getContractAt("IERC20", baseToken) as IERC20;
+  await depositTokens(tokens, api, path, newApp, base20);
 }
 
 async function deployIt() {
