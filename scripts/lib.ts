@@ -1,7 +1,7 @@
 import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
-import {IERC20} from "../typechain";
+import {APICoin, IERC20, ISwap, TokenRouter} from "../typechain";
 export const tokensNet71 = {
 	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
 	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
@@ -13,6 +13,28 @@ export const tokensNet71 = {
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)
+}
+export async function depositTokens(tokens:any, myRouter:TokenRouter, path:string[], testApp: string, base20: IERC20) {
+	const swapRouter = tokens.__router //
+	const useToken = await ethers.getContractAt("IERC20", path[0]) as IERC20;
+	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
+	console.log(`approved`)
+	await myRouter.depositWithSwap(swapRouter, parseEther("1"), 0, path, testApp, getDeadline()).then(tx => tx.wait())
+	console.log(`depositWithSwap ok`)
+	//
+	await base20.approve(myRouter.address, parseEther("1")).then(waitTx)
+	await myRouter.depositBaseToken(parseEther("1"), testApp).then(waitTx)
+	console.log(`depositBaseToken. done`)
+
+	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
+	console.log(`approved`)
+	await myRouter.swapTokensForExactBaseTokens(swapRouter, parseEther("1"),
+		parseEther("1"), path, testApp, getDeadline()).then(tx => tx.wait())
+	console.log(`swapTokensForExactBaseTokens ok`)
+
+	await myRouter.depositNativeValue(swapRouter, parseEther("0.03"), [tokens.wcfx, base20.address], testApp, getDeadline()
+		, {value: parseEther("1")}).then(tx=>tx.wait())
+	console.log(`depositNativeValue done`)
 }
 export async function approveERC20(token:string, to:string, amount:string) {
 	const template = await ethers.getContractFactory([
