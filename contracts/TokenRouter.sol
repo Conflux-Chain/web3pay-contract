@@ -30,6 +30,7 @@ interface ISwap {
     returns (uint[] memory amounts);
 
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
+    function WETH() external view returns (address);
 }
 
 /**
@@ -41,12 +42,13 @@ interface ISwap {
 contract TokenRouter {
     /** Token used for pricing. */
     address public baseToken;
+    address public swap_;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[49] private __gap;
+    uint256[48] private __gap;
     constructor() {
     }
     /** Set baseToken. Cannot put it in constructor because subcontract may be proxyable. */
@@ -66,12 +68,13 @@ contract TokenRouter {
      * - toApp: deposit for which app
      * - deadline: timestamp ( in seconds ) before which this transaction should be executed.
      */
-    function depositNativeValue(address swap, uint amountOut, address[] calldata path, address toApp, uint deadline) public payable {
+    function depositNativeValue(address swap, uint amountOut, address[] memory path, address toApp, uint deadline) public payable {
         require(path[path.length-1] == baseToken, 'invalid path');
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
 
         // get exact cost
         uint[] memory amountsIn = ISwap(swap).getAmountsIn(amountOut, path);
+        require(msg.value >= amountsIn[0], "insufficient payment");
         // send exact cost to swap
         uint[] memory amounts = ISwap(swap).swapETHForExactTokens{value: amountsIn[0]}(amountOut, path, address(this), deadline);
         _checkSwapResultAndMint(amounts, balance0, toApp);
@@ -80,7 +83,22 @@ contract TokenRouter {
             safeTransferETH(msg.sender, dust);
         }
     }
-
+    function checkPayToken(address pay) internal view returns (address, bool isWETH) {
+        if (pay == address(0)) {
+            return (ISwap(swap_).WETH(), true);
+        }
+        return (pay,false);
+    }
+    function buildPath(address t1, address t2) internal pure returns (address[] memory path){
+        path = new address[](2);
+        path[0] = t1;
+        path[1] = t2;
+    }
+    function getAmountsIn(address pay, uint amountOut) public view returns (uint) {
+        (pay, ) = checkPayToken(pay);
+        uint[] memory amountsIn = ISwap(swap_).getAmountsIn(amountOut, buildPath(pay, baseToken));
+        return amountsIn[0];
+    }
     function safeTransferETH(address to, uint value) internal {
         (bool success,) = to.call{value:value}(new bytes(0));
         require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
@@ -92,12 +110,25 @@ contract TokenRouter {
         IERC20(baseToken).transferFrom(msg.sender, address(this), amountIn);
         _mintAndSend(amountIn, toApp);
     }
-
+    function depositWrap(address pay,
+        uint amountIn,
+        uint amountOutMin,
+        address toApp, uint deadline
+            ) public payable {
+        bool isWETH;
+        (pay, isWETH) = checkPayToken(pay);
+        if (isWETH) {
+            depositNativeValue(swap_, amountOutMin, buildPath(pay, baseToken), toApp, deadline);
+        } else {
+            require(msg.value == 0, "unused payment");
+            depositWithSwap(swap_, amountIn, amountOutMin, buildPath(pay, baseToken), toApp, deadline);
+        }
+    }
     /** Deposit other token rather than base token, do an auto swapping. Must do approving first. */
     function depositWithSwap(address swap,
         uint amountIn,
         uint amountOutMin,
-        address[] calldata path,
+        address[] memory path,
         address toApp,
         uint deadline) public {
         uint balance0 = IERC20(baseToken).balanceOf(address(this));
