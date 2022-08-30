@@ -157,14 +157,14 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     /** @dev Used by an API consumer to send a withdraw request, API key related to the caller will be frozen. */
     function withdrawRequest() public whenNotPaused {
         require(frozenMap[msg.sender] == 0, 'Account is frozen');
-        frozenMap[msg.sender] = block.number;
+        frozenMap[msg.sender] = block.timestamp;
         emit Frozen(msg.sender);
     }
     /** @dev After the delay time expires, the user can withdraw the remaining funds. */
     function forceWithdraw() public whenNotPaused {
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
-        require(block.number - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
+        require(block.timestamp - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
         _withdraw(msg.sender, "force withdraw");
     }
     function refund(address account) public onlyAppOwner {

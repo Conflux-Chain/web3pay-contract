@@ -29,9 +29,13 @@ async function main() {
   await depositForLatestApp()
 }
 
-async function depositForLatestApp() {
+function loadDeployInfo() {
   const deployInfoStr = fs.readFileSync(deployInfoFile).toString();
   const deployInfo = JSON.parse(deployInfoStr)
+  return deployInfo;
+}
+async function depositForLatestApp() {
+  const deployInfo = loadDeployInfo();
   let controllerAddr = deployInfo['controllerProxy'];
   console.log(`user controller ${controllerAddr}`)
   const controller = await attach("Controller", controllerAddr) as Controller;
@@ -118,8 +122,10 @@ async function deployProxy(name: string, args: any[]) {
 }
 
 async function upgradeApp() {
+  console.log(`upgradeApp`)
+  const deployInfo = loadDeployInfo();
   const newAppImpl = await deploy("Airdrop", [])
-  const beacon = await attach("UpgradeableBeacon", "0xde63bf7ee5685da53c39e92388131e2810f1a98e") as UpgradeableBeacon
+  const beacon = await attach("UpgradeableBeacon", deployInfo['appBeaconBase']) as UpgradeableBeacon
   const receipt = await beacon.upgradeTo(newAppImpl?.address!).then(tx=>tx.wait())
   console.log(`upgraded to ${newAppImpl?.address}, tx ${receipt.transactionHash}`)
 }
