@@ -196,16 +196,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     }
     // ------------ public -------------
     function listUser(uint256 offset, uint256 limit) public view returns (UserCharged[] memory, uint256 total){
-        require(offset <= users.length, 'invalid offset');
-        if (offset + limit >= users.length) {
-            limit = users.length - offset;
+        require(offset <= allUserArray.length, 'invalid offset');
+        if (offset + limit >= allUserArray.length) {
+            limit = allUserArray.length - offset;
         }
         UserCharged [] memory arr = new UserCharged[](limit);
         for(uint i=0; i<limit; i++) {
-            arr[i] = UserCharged(users[offset], chargedMapping[users[offset]]);
+            arr[i] = UserCharged(allUserArray[offset], chargedMapping[allUserArray[offset]]);
             offset += 1;
         }
-        return (arr, users.length);
+        return (arr, allUserArray.length);
     }
     // -------------------------open zeppelin----------------------------
     constructor()
