@@ -56,6 +56,11 @@ contract TokenRouter {
         require(baseToken == address(0), 'already initialized');
         baseToken = baseToken_;
     }
+    /** subcontract overrides it and checks permission. */
+    function setSwap(address _swap) public virtual {
+        require(swap_ == address(0), "already set");
+        swap_ = _swap;
+    }
     /**
      * Deposit native value, that is CFX on conflux chain.
      * When depositing from Conflux Core space, the value sent should equal to amount needed by the swapping,
@@ -83,17 +88,23 @@ contract TokenRouter {
             safeTransferETH(msg.sender, dust);
         }
     }
+    /** adjust quote token, if it was zero, use WETH. */
     function checkPayToken(address pay) internal view returns (address, bool isWETH) {
         if (pay == address(0)) {
             return (ISwap(swap_).WETH(), true);
         }
         return (pay,false);
     }
+    /** build an address[] memory as path */
     function buildPath(address t1, address t2) internal pure returns (address[] memory path){
         path = new address[](2);
         path[0] = t1;
         path[1] = t2;
     }
+    /**
+     * calculate how much `pay` token is needed when swapping for amountOut baseToken,
+     * using zero address as `pay` indicates using native value.
+     */
     function getAmountsIn(address pay, uint amountOut) public view returns (uint) {
         (pay, ) = checkPayToken(pay);
         uint[] memory amountsIn = ISwap(swap_).getAmountsIn(amountOut, buildPath(pay, baseToken));
@@ -110,7 +121,10 @@ contract TokenRouter {
         IERC20(baseToken).transferFrom(msg.sender, address(this), amountIn);
         _mintAndSend(amountIn, toApp);
     }
-    function depositWrap(address pay,
+    /** deposit without caring about the underlying swapping detail,
+     * use zero address as `pay` when paying native value.
+     */
+    function depositWrap(address pay, // pay which token, address(0) means native value
         uint amountIn,
         uint amountOutMin,
         address toApp, uint deadline

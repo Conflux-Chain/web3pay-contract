@@ -62,6 +62,12 @@ Used by anyone who holds API coin to exchange CFX back.
 
 
 
+### `setSwap(address _swap)` (public)
+
+
+
+
+
 ### `pause()` (public)
 
 

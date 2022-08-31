@@ -14,6 +14,12 @@ Set baseToken. Cannot put it in constructor because subcontract may be proxyable
 
 
 
+### `setSwap(address _swap)` (public)
+
+subcontract overrides it and checks permission.
+
+
+
 ### `depositNativeValue(address swap, uint256 amountOut, address[] path, address toApp, uint256 deadline)` (public)
 
 Deposit native value, that is CFX on conflux chain.
@@ -29,6 +35,25 @@ Parameters:
 
 
 
+### `checkPayToken(address pay) → address, bool isWETH` (internal)
+
+adjust quote token, if it was zero, use WETH.
+
+
+
+### `buildPath(address t1, address t2) → address[] path` (internal)
+
+build an address[] memory as path
+
+
+
+### `getAmountsIn(address pay, uint256 amountOut) → uint256` (public)
+
+calculate how much `pay` token is needed when swapping for amountOut baseToken,
+using zero address as `pay` indicates using native value.
+
+
+
 ### `safeTransferETH(address to, uint256 value)` (internal)
 
 
@@ -41,9 +66,22 @@ Deposit base token directly. Must do approving first.
 
 
 
+### `depositWrap(address pay, uint256 amountIn, uint256 amountOutMin, address toApp, uint256 deadline)` (public)
+
+deposit without caring about the underlying swapping detail,
+use zero address as `pay` when paying native value.
+
+
+
 ### `depositWithSwap(address swap, uint256 amountIn, uint256 amountOutMin, address[] path, address toApp, uint256 deadline)` (public)
 
 Deposit other token rather than base token, do an auto swapping. Must do approving first.
+
+
+
+### `swapTokensForExactBaseTokens(address swap, uint256 amountOut, uint256 amountInMax, address[] path, address toApp, uint256 deadline)` (public)
+
+swapTokensForExactBaseTokens, call swap.swapTokensForExactTokens()
 
 
 

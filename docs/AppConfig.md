@@ -35,7 +35,7 @@ There is a delayed execution mechanism when configuring resources.
 
 
 
-### `setPendingProp(uint32 id, enum AppConfig.OP op_, uint32 weight_)` (internal)
+### `setPendingProp(uint32 id, enum AppConfig.OP op_, uint256 weight_)` (internal)
 
 
 
@@ -78,13 +78,13 @@ Make the configuration that satisfies the delay mechanism take effect.
 
 
 
-### `ResourceChanged(uint32 id, uint32 weight, enum AppConfig.OP op)`
+### `ResourceChanged(uint32 id, uint256 weight, enum AppConfig.OP op)`
 
 
 
 
 
-### `ResourcePending(uint32 id, uint32 newWeight, enum AppConfig.OP op)`
+### `ResourcePending(uint32 id, uint256 newWeight, enum AppConfig.OP op)`
 
 
 
@@ -97,7 +97,7 @@ Make the configuration that satisfies the delay mechanism take effect.
 string resourceId
 
 
-uint32 weight
+uint256 weight
 
 
 uint32 index
@@ -106,7 +106,7 @@ uint32 index
 enum AppConfig.OP pendingOP
 
 
-uint32 pendingWeight
+uint256 pendingWeight
 
 
 uint256 submitSeconds
@@ -124,7 +124,7 @@ uint32 id
 string resourceId
 
 
-uint32 weight
+uint256 weight
 
 
 enum AppConfig.OP op

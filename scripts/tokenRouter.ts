@@ -32,18 +32,34 @@ async function test(tokens: any) {
 	const baseToken = tokens.usdt;
 	// const myRouter = await deploy("TokenRouter", []) as TokenRouter;
 	// await myRouter.initTokenRouter(baseToken).then(waitTx);
-	const myRouter = await ethers.getContractAt("TokenRouter", "0x1F0eE460DE6d0d4733308077487B0551f818CdD2") as TokenRouter;
+	// await myRouter.setSwap(tokens.__router).then(waitTx)
+	const myRouter = await ethers.getContractAt("TokenRouter", "0xDCD457e3A526204308CD33C290496eA72AA74753") as TokenRouter;
 	const testApp = '0xe15b9df25e55185b0faba9804cc3026879e5ef05';
 	const swapRouter = tokens.__router //
 	const path = [
 		tokens.btc, baseToken,
 	]
 	const base20 = await ethers.getContractAt("IERC20", baseToken) as IERC20;
+	await depositWrap(myRouter, testApp, ethers.constants.AddressZero);
+	await depositWrap(myRouter, testApp, tokens.btc);
 	await depositTokens(tokens, myRouter, path, testApp, base20);
 	// await withdraw(swap, tokens, myRouter, baseToken, testApp, base20);
 	// await depositNative(swap, tokens, myRouter, swapRouter, testApp, base20);
 }
-
+async function depositWrap(myRouter:TokenRouter, testApp:string, pay:string) {
+	const inputAmount = await myRouter.getAmountsIn(pay, parseEther("1"), )
+	let isNativeValue = pay == ethers.constants.AddressZero;
+	console.log(`trying deposit, pay ${pay} x ${inputAmount} / ${formatEther(inputAmount)}`)
+	if (!isNativeValue) {
+		const erc20 = await ethers.getContractAt("IERC20", pay) as IERC20;
+		console.log(`balance of ${pay} ${await erc20.balanceOf(await myRouter.signer.getAddress()).then(formatEther)}`)
+		await erc20.approve(myRouter.address, inputAmount).then(waitTx)
+	}
+	await myRouter.depositWrap(pay, inputAmount, parseEther("1"), testApp, getDeadline(),{
+		value: isNativeValue ? inputAmount : 0
+	}).then(waitTx)
+	console.log(`deposit wrap ok, pay token ${pay}`)
+}
 async function withdraw(swap:ISwap, tokens:any, myRouter:TokenRouter, baseToken:string, testApp: string, base20: IERC20) {
 	const dApp = await attach("APPCoin", testApp) as APPCoin;
 	if (await dApp.frozenMap(acc1).then(flag=>flag.eq(0))) {
