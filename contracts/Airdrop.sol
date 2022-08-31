@@ -15,6 +15,7 @@ contract Airdrop is APPCoin {
     /** AppOwner could airdrop to user. */
     function airdrop(address to, uint256 amount, string memory reason) public onlyAppOwner {
         drops[to] += amount;
+        _addNewUser(to);
         emit Drop(to, amount, reason);
     }
 

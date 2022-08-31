@@ -54,13 +54,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     event Withdraw(address account, uint256 amount);
     uint256 public totalCharged;
     uint256 public totalTakenProfit;
-
+    uint256 public totalRequests;
+    // all user who had deposited or been airdropped, value is block second
+    mapping(address=>uint256) public allUserMapping;
+    address[] public allUserArray;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[40] private __gap;
+    uint256[37] private __gap;
 
     struct ResourceUseDetail {
         uint32 id;
@@ -81,6 +84,14 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             revert('Account is frozen');
         }
         _mint(from, FT_ID, amount, 'ApiCoin received');
+        _addNewUser(from);
+    }
+    function _addNewUser(address addr) internal {
+        if (allUserMapping[addr] > 0) {
+            return;
+        }
+        allUserMapping[addr] = block.timestamp;
+        allUserArray.push(addr);
     }
     // prevent transfer
     function _beforeTokenTransfer(
@@ -142,6 +153,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             }
             config.requestTimes += useDetail[i].times;
             userRequestCounter[account][id] += useDetail[i].times;
+            totalRequests += useDetail[i].times;
         }
 
         if (frozenMap[account] > 1) {
@@ -184,16 +196,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     }
     // ------------ public -------------
     function listUser(uint256 offset, uint256 limit) public view returns (UserCharged[] memory, uint256 total){
-        require(offset <= users.length, 'invalid offset');
-        if (offset + limit >= users.length) {
-            limit = users.length - offset;
+        require(offset <= allUserArray.length, 'invalid offset');
+        if (offset + limit >= allUserArray.length) {
+            limit = allUserArray.length - offset;
         }
         UserCharged [] memory arr = new UserCharged[](limit);
         for(uint i=0; i<limit; i++) {
-            arr[i] = UserCharged(users[offset], chargedMapping[users[offset]]);
+            arr[i] = UserCharged(allUserArray[offset], chargedMapping[allUserArray[offset]]);
             offset += 1;
         }
-        return (arr, users.length);
+        return (arr, allUserArray.length);
     }
     // -------------------------open zeppelin----------------------------
     constructor()

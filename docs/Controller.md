@@ -6,13 +6,25 @@ DApp developers can register their app through this controller.
 An ERC777 contract will be deployed, which then will be used as a settlement contract between API consumer and API supplier.
 
 
-### `constructor(address api_, address appBase_)` (public)
+### `constructor()` (public)
 
 
 
 
 
-### `createApp(string name_, string symbol_, string description_, uint32 defaultWeight)` (public)
+### `initialize(address api_, address appBase_)` (public)
+
+
+
+
+
+### `changeAppOwner(address from, address to)` (external)
+
+
+
+
+
+### `createApp(string name_, string symbol_, string description_, uint256 defaultWeight)` (public)
 
 
 
@@ -32,6 +44,12 @@ There is a delayed execution mechanism when configuring resources. It is best to
 
 
 List created DApp settlement contracts.
+
+### `_authorizeUpgrade(address newImplementation)` (internal)
+
+
+
+
 
 
 ### `APP_CREATED(address addr, address appOwner)`

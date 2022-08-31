@@ -4,17 +4,16 @@
 
 Settlement contract between API consumer and API supplier.
 
-For Api supplier:
+For Api provider:
 - setResourceWeightBatch
 - setResourceWeight
 - charge
-- freeze
+- refund
 - takeProfit
 
 For api consumer:
 - withdrawRequest
 - forceWithdraw
-- freeze
 
 ### `onlyAppOwner()`
 
@@ -35,11 +34,17 @@ For api consumer:
 
 
 
-### `freeze(address acc, bool f)` (public)
+### `transferAppOwner(address to, address controller)` (public)
 
 
 
 Freeze/Unfreeze an account.
+
+### `freeze(address acc, bool f)` (public)
+
+
+
+
 
 ### `takeProfit(address to, uint256 amount)` (public)
 
@@ -69,7 +74,19 @@ Used by an API consumer to send a withdraw request, API key related to the calle
 
 
 
-After some time, user can force withdraw his funds anyway.
+After the delay time expires, the user can withdraw the remaining funds.
+
+### `refund(address account)` (public)
+
+
+
+
+
+### `_withdraw(address account, bytes reason)` (internal)
+
+
+
+
 
 ### `setForceWithdrawDelay(uint256 delay)` (public)
 
@@ -89,7 +106,7 @@ After some time, user can force withdraw his funds anyway.
 
 
 
-### `init(address apiCoin_, address appOwner_, string name_, string symbol_, string uri_, uint32 defaultWeight)` (public)
+### `init(address apiCoin_, address appOwner_, string name_, string symbol_, string uri_, uint256 defaultWeight)` (public)
 
 
 
@@ -143,6 +160,12 @@ After some time, user can force withdraw his funds anyway.
 
 
 
+### `decimals() → uint8` (public)
+
+
+
+
+
 ### `_mintConfig(address to, uint256 id, uint256 amount, bytes data)` (internal)
 
 
@@ -164,6 +187,12 @@ It is required that the name of this contract is DO_NOT_DEPOSIT and the symbol i
 
 ### `hashCompareWithLengthCheck(string a, string b) → bool` (internal)
 
+
+
+
+
+
+### `AppOwnerChanged(address to)`
 
 
 

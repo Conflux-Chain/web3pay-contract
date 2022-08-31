@@ -88,6 +88,10 @@ contract APICoin is TokenRouter, Initializable, ERC777Upgradeable, PausableUpgra
         initTokenRouter(baseToken);
     }
 
+    function setSwap(address _swap) override public onlyOwner{
+        super.setSwap(_swap);
+    }
+
     function pause() public onlyOwner {
         _pause();
     }
