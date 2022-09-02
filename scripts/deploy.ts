@@ -4,7 +4,16 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import {ethers, upgrades} from "hardhat";
-import {Airdrop, APICoin, Controller, ERC1967Proxy, IERC20, ISwap, TokenRouter, UpgradeableBeacon} from "../typechain";
+import {
+  Airdrop,
+  APICoin,
+  Controller,
+  ERC1967Proxy,
+  IERC20,
+  ISwap,
+  TokenRouter,
+  UpgradeableBeacon
+} from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
 import {
@@ -16,7 +25,7 @@ import {
   mintERC20,
   networkInfo,
   sleep,
-  tokensNet71
+  tokensNet71, waitTx
 } from "./lib";
 import {ContractTransaction} from "ethers";
 import * as fs from "fs";
@@ -121,6 +130,15 @@ async function deployProxy(name: string, args: any[]) {
   return contract;
 }
 
+async function upgradeApi() {
+  const deployInfo = loadDeployInfo();
+  const apiProxy = deployInfo.apiProxy;
+  console.log(`use api proxy ${apiProxy}`)
+  const api = await attach("APICoin", apiProxy) as APICoin;
+  const apiv2 = await deploy("APICoin",[]) as APICoin;
+  await api.upgradeTo(apiv2.address).then(waitTx)
+  console.log(`api upgraded`)
+}
 async function upgradeApp() {
   console.log(`upgradeApp`)
   const deployInfo = loadDeployInfo();

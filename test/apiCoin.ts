@@ -106,15 +106,15 @@ describe("Controller", async function () {
     await controller.createApp("app 1", "a1", "app description", 3).then(tx=>tx.wait());
     const api1addr = api.address
     const app1 = await controller.appMapping(0)
-    const originApp1 = await attach("APICoin", api1addr) as APICoin
-    await originApp1.depositToApp(app1, {value: parseEther("1")}).then(tx=>tx.wait())
+    const originApi1 = await attach("APICoin", api1addr) as APICoin
+    await originApi1.depositToApp(app1, {value: parseEther("1")}).then(tx=>tx.wait())
     //
     const apiv2 = await deploy("ApiV2",[]) as ApiV2;
-    await expect(originApp1.upgradeTo(apiv2.address)).emit(originApp1, originApp1.interface.events["Upgraded(address)"].name)
+    await expect(originApi1.upgradeTo(apiv2.address)).emit(originApi1, originApi1.interface.events["Upgraded(address)"].name)
         .withArgs(apiv2.address);
     const upgradedV2 = await apiv2.attach(api1addr)
     expect(await upgradedV2.version()).eq("ApiV2")
-    expect(await originApp1.balanceOf(app1)).eq(parseEther("1"))
+    expect(await originApi1.balanceOf(app1)).eq(parseEther("1"))
   })
 
   it("upgrade app, beacon", async function (){
