@@ -10,8 +10,8 @@ import {IncomingMessage} from "http";
 async function main() {
 	await Promise.all([
 		// verifyContract('Controller', '0x0cce3a75536c3ba9612bd0eef2979cb494562340'),
-		verifyContract('APICoin', '0x1332DC018a7bA4b63B766f6aa674C12Ea09a9211'), // api impl
-		// verifyContract('Airdrop', '0xEB019a0215d1Aa981F89Ed2b6fc1A070a822e995'),
+		// verifyContract('APICoin', '0x1332DC018a7bA4b63B766f6aa674C12Ea09a9211'), // api impl
+		verifyContract('Airdrop', '0x5B3233D25D9c92BC6d0f7620DE181e05eA36D013'),
 		// verifyContract('TokenRouter', '0x8948152d858d6713D0A62649DAD9B3384bdd92f3'),
 		]
 	)
