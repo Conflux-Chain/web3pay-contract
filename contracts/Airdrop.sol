@@ -13,15 +13,15 @@ contract Airdrop is APPCoin {
     event Spend(address indexed from, uint256 amount);
     event Drop(address indexed to, uint256 amount, string reason);
     /** AppOwner could airdrop to user. */
-    function airdrop(address to, uint256 amount, string memory reason) public onlyAppOwner {
+    function airdrop(address to, uint256 amount, string memory reason) public {
+        require(balanceOf(msg.sender, AIRDROP_ID) == 1, "no permission");
         drops[to] += amount;
         _addNewUser(to);
         emit Drop(to, amount, reason);
     }
 
-    function airdropBatch(address[] memory to, uint256[] memory amount, string[] memory reason) public onlyAppOwner {
-        require(to.length == amount.length, "invalid length of amount");
-        require(to.length == reason.length, "invalid length of reason");
+    function airdropBatch(address[] memory to, uint256[] memory amount, string[] memory reason) public {
+        require(to.length == amount.length && to.length == reason.length, "invalid length");
         for(uint i=0; i<to.length; i++) {
             airdrop(to[i], amount[i], reason[i]);
         }
@@ -30,6 +30,10 @@ contract Airdrop is APPCoin {
     function balanceOfWithAirdrop(address owner) public view override returns (uint256 total, uint256 airdrop_){
         airdrop_ = drops[owner];
         total = balanceOf(owner, FT_ID) + airdrop_;
+    }
+
+    function configAirdropPrivilege(address account, bool add) external onlyAppOwner{
+        _configPrivilege(account, add, AIRDROP_ID);
     }
     /**
      * Charge account's quota.

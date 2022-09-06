@@ -123,10 +123,25 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             delete frozenMap[acc];
         }
     }
-    function takeProfit(address to, uint256 amount) public onlyAppOwner whenNotPaused {
+    function configTakeProfitPrivilege(address account, bool add) external onlyAppOwner {
+        _configPrivilege(account, add, TAKE_PROFIT_ID);
+    }
+    function _configPrivilege(address account, bool add, uint id) internal  {
+        uint mark = balanceOf(account, id);
+        if (add) {
+            require(mark == 0, "already added");
+            _mint(account, id, 1, 'configPrivilege');
+        } else {
+            require(mark == 1, "bad mark value");
+            _burn(account, id, mark);
+        }
+    }
+    function takeProfit(address to, uint256 amount) public whenNotPaused {
+        require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "no permission");
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
-        IERC777(apiCoin).send(to, amount, "takeProfit");
+//        IERC777(apiCoin).send(to, amount, "takeProfit");
+        _swapApiCoin(amount, to);
     }
     function chargeBatch(ChargeRequest[] memory requestArray) public onlyAppOwner whenNotPaused {
         for(uint i=0; i<requestArray.length; i++) {
@@ -177,17 +192,25 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(frozenMap[msg.sender] != 1, 'Frozen by admin');
         require(frozenMap[msg.sender] > 0, 'Withdraw request first');
         require(block.timestamp - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
-        _withdraw(msg.sender, "force withdraw");
+        _withdraw(msg.sender, "force");
     }
     function refund(address account) public onlyAppOwner {
-        _withdraw(account, "app owner refund");
+        _withdraw(account, "refund");
     }
-    function _withdraw(address account, bytes memory reason) internal {
+    function _withdraw(address account, bytes memory /*reason*/) internal {
         uint256 appCoinLeft = balanceOf(account, FT_ID);
         _burn(account, FT_ID, appCoinLeft);
-        IERC777(apiCoin).send(account, appCoinLeft, reason);
+//        IERC777(apiCoin).send(account, appCoinLeft, reason);
+        _swapApiCoin(appCoinLeft, account);
         delete frozenMap[account];
         emit Withdraw(account, appCoinLeft);
+    }
+    function _swapApiCoin(uint amount, address to) internal {
+        address[] memory path = new address[](1);
+        path[0] = IAPICoin(apiCoin).baseToken(); // will be treated as with base token
+        IAPICoin(apiCoin).withdraw(
+            IAPICoin(apiCoin).swap_(),
+                amount, amount, path, to, block.timestamp + 100);
     }
     // -------- app owner operation -----------
     function setForceWithdrawDelay(uint256 delay) public onlyAppOwner whenNotPaused{
@@ -227,6 +250,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _setURI(uri_);
         apiCoin = apiCoin_;
         appOwner = appOwner_;
+        _configPrivilege(appOwner_, true, TAKE_PROFIT_ID);
+        _configPrivilege(appOwner_, true, AIRDROP_ID);
         emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
         nextConfigId = FIRST_CONFIG_ID;
@@ -278,7 +303,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     }
 
     function uri(uint256 tokenId) public view virtual override returns (string memory) {
-        string memory _name = tokenId == FT_ID ? name : resourceConfigures[uint32(tokenId)].resourceId;
+        string memory _name;
+        if (tokenId == FT_ID) {
+            _name = name;
+        } else if (tokenId == TAKE_PROFIT_ID) {
+            _name = "Funds";
+        } else if (tokenId == AIRDROP_ID) {
+            _name = "Airdrop";
+        } else {
+            _name = resourceConfigures[uint32(tokenId)].resourceId;
+        }
         string memory _desc = super.uri(tokenId);
         string memory json;
         string memory output;

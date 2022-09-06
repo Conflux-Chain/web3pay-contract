@@ -12,6 +12,9 @@ interface ISwap {
         uint deadline
     ) external returns (uint[] memory amounts);
 
+    function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
+        external returns (uint[] memory amounts);
+
     function swapTokensForExactTokens(
         uint amountOut,
         uint amountInMax,
@@ -219,7 +222,11 @@ contract TokenRouter {
         }
 
         IERC20(baseToken).approve(swap, amountIn);
-        ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);
+        if (path[1] == ISwap(swap).WETH()) {
+            ISwap(swap).swapExactTokensForETH(amountIn, amountOutMin, path, to, deadline);
+        } else {
+            ISwap(swap).swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);
+        }
     }
 
     /** Subclass should implement this method. */
