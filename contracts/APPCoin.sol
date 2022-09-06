@@ -140,7 +140,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "no permission");
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
-        IERC777(apiCoin).send(to, amount, "takeProfit");
+//        IERC777(apiCoin).send(to, amount, "takeProfit");
+        _swapApiCoin(amount, to);
     }
     function chargeBatch(ChargeRequest[] memory requestArray) public onlyAppOwner whenNotPaused {
         for(uint i=0; i<requestArray.length; i++) {
@@ -200,13 +201,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         uint256 appCoinLeft = balanceOf(account, FT_ID);
         _burn(account, FT_ID, appCoinLeft);
 //        IERC777(apiCoin).send(account, appCoinLeft, reason);
-        address swap = IAPICoin(apiCoin).swap_();
-        address baseToken = IAPICoin(apiCoin).baseToken();
-        address[] memory path = new address[](1);
-        path[0] = baseToken; // will be treated as with base token
-        IAPICoin(apiCoin).withdraw(swap, appCoinLeft, appCoinLeft, path, account, block.timestamp + 100);
+        _swapApiCoin(appCoinLeft, account);
         delete frozenMap[account];
         emit Withdraw(account, appCoinLeft);
+    }
+    function _swapApiCoin(uint amount, address to) internal {
+        address[] memory path = new address[](1);
+        path[0] = IAPICoin(apiCoin).baseToken(); // will be treated as with base token
+        IAPICoin(apiCoin).withdraw(
+            IAPICoin(apiCoin).swap_(),
+                amount, amount, path, to, block.timestamp + 100);
     }
     // -------- app owner operation -----------
     function setForceWithdrawDelay(uint256 delay) public onlyAppOwner whenNotPaused{

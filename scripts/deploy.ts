@@ -145,7 +145,7 @@ async function upgradeApp() {
   const newAppImpl = await deploy("Airdrop", [])
   const beacon = await attach("UpgradeableBeacon", deployInfo['appBeaconBase']) as UpgradeableBeacon
   const receipt = await beacon.upgradeTo(newAppImpl?.address!).then(tx=>tx.wait())
-  console.log(`upgraded to ${newAppImpl?.address}, tx ${receipt.transactionHash}`)
+  console.log(`upgraded to ${newAppImpl?.address} , tx ${receipt.transactionHash}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
