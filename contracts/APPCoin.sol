@@ -254,6 +254,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _configPrivilege(appOwner_, true, AIRDROP_ID);
         emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
+        pendingSeconds = 3600 * 24 * 7;
         nextConfigId = FIRST_CONFIG_ID;
         ConfigRequest memory request = ConfigRequest(0, "default", defaultWeight, OP.ADD);
         _configResource(request);

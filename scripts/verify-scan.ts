@@ -11,7 +11,7 @@ async function main() {
 	await Promise.all([
 		// verifyContract('Controller', '0x0cce3a75536c3ba9612bd0eef2979cb494562340'),
 		// verifyContract('APICoin', '0x1332DC018a7bA4b63B766f6aa674C12Ea09a9211'), // api impl
-		verifyContract('Airdrop', '0x8B1D2D6AfE737F40f8fE6c7961eB658A7Ca05264'),
+		verifyContract('Airdrop', '0x4F7a320C473F0F0D6a9A40E97a2bdb286B39C15B'),
 		// verifyContract('TokenRouter', '0x8948152d858d6713D0A62649DAD9B3384bdd92f3'),
 		]
 	)
