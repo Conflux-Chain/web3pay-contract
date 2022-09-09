@@ -79,11 +79,11 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
 
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external whenNotPaused {
-        require(msg.sender == apiCoin, 'ApiCoin Required');
+        require(msg.sender == apiCoin, 'ApiCoin Required');//ApiCoin Required
         if (frozenMap[from] > 0) {
-            revert('Account is frozen');
+            revert('Frozen');
         }
-        _mint(from, FT_ID, amount, 'ApiCoin received');
+        _mint(from, FT_ID, amount, 'deposit');
         _addNewUser(from);
     }
     function _addNewUser(address addr) internal {
@@ -115,7 +115,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         emit AppOwnerChanged(to);
     }
     function freeze(address acc, bool f) public {
-        require(msg.sender == appOwner || msg.sender == owner(), 'Unauthorised');
+        require(msg.sender == appOwner || msg.sender == owner(), '403');
         if (f) {
             frozenMap[acc] = 1;
             emit Frozen(acc);
@@ -123,13 +123,16 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             delete frozenMap[acc];
         }
     }
+    function configBillingPrivilege(address account, bool add) external onlyAppOwner {
+        _configPrivilege(account, add, BILLING_ID);
+    }
     function configTakeProfitPrivilege(address account, bool add) external onlyAppOwner {
         _configPrivilege(account, add, TAKE_PROFIT_ID);
     }
     function _configPrivilege(address account, bool add, uint id) internal  {
         uint mark = balanceOf(account, id);
         if (add) {
-            require(mark == 0, "already added");
+            require(mark == 0, "dup");//already added
             _mint(account, id, 1, 'configPrivilege');
         } else {
             require(mark == 1, "bad mark value");
@@ -137,20 +140,26 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         }
     }
     function takeProfit(address to, uint256 amount) public whenNotPaused {
-        require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "no permission");
+        require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "403");//check permission
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
 //        IERC777(apiCoin).send(to, amount, "takeProfit");
         _swapApiCoin(amount, to);
     }
-    function chargeBatch(ChargeRequest[] memory requestArray) public onlyAppOwner whenNotPaused {
+    function chargeBatch(ChargeRequest[] memory requestArray) public whenNotPaused {
+        require(balanceOf(msg.sender, BILLING_ID) == 1, "403");//check permission
         for(uint i=0; i<requestArray.length; i++) {
             ChargeRequest memory request = requestArray[i];
-            charge(request.account, request.amount, request.data, request.useDetail);
+            _charge(request.account, request.amount, request.data, request.useDetail);
         }
     }
     /** @dev Charge fee*/
-    function charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) public virtual onlyAppOwner whenNotPaused{
+    function charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) public virtual whenNotPaused{
+        require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "403");//check permission
+        _charge(account, amount, "", useDetail);
+    }
+    /* charge without checking billing permission. **/
+    function _charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) internal virtual whenNotPaused{
         _burn(account, FT_ID, amount);
         totalCharged += amount;
         if (chargedMapping[account] == 0 && amount > 0) {
@@ -194,7 +203,9 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(block.timestamp - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
         _withdraw(msg.sender, "force");
     }
-    function refund(address account) public onlyAppOwner {
+    function refund(address account) public {
+        // airdropping and refunding are some issues.
+        require(balanceOf(msg.sender, AIRDROP_ID) == 1, "403");//check permission
         _withdraw(account, "refund");
     }
     function _withdraw(address account, bytes memory /*reason*/) internal {
@@ -214,7 +225,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     }
     // -------- app owner operation -----------
     function setForceWithdrawDelay(uint256 delay) public onlyAppOwner whenNotPaused{
-        require(delay <= 3600 * 3, 'delay exceeds 3 hours');
+        require(delay <= 3600 * 3, 'exceeds 3 hours');
         forceWithdrawDelay = delay;
     }
     // ------------ public -------------
@@ -238,11 +249,11 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
      *  Called immediately after constructing through Controller contract.
      */
     function initOwner(address owner_) public {
-        require(owner() == address(0), 'Owner exists');
+        require(owner() == address(0), 'dup');//Owner exists
         _transferOwnership(owner_);
     }
     function init(address apiCoin_, address appOwner_, string memory name_, string memory symbol_, string memory uri_, uint256 defaultWeight) public onlyOwner{
-        require(apiCoin == address(0), 'Already initialized!');
+        require(apiCoin == address(0), 'dup');//Already initialized!
 
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), _TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         name = name_;
@@ -252,6 +263,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         appOwner = appOwner_;
         _configPrivilege(appOwner_, true, TAKE_PROFIT_ID);
         _configPrivilege(appOwner_, true, AIRDROP_ID);
+        _configPrivilege(appOwner_, true, BILLING_ID);
         emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
         pendingSeconds = 3600 * 24 * 7;
@@ -269,8 +281,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         _unpause();
     }
 
-    function _authorizeAppConfig() internal override onlyAppOwner {
-        // nothing but a modifier to check permission
+    function _authorizeAppConfig() internal view override {
+        require(balanceOf(msg.sender, BILLING_ID) == 1, "403");//check permission
     }
 
     function balanceOfWithAirdrop(address owner) virtual view public returns (uint256 total, uint256 airdrop) {
@@ -309,6 +321,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             _name = name;
         } else if (tokenId == TAKE_PROFIT_ID) {
             _name = "Funds";
+        } else if (tokenId == BILLING_ID) {
+            _name = "Billing";
         } else if (tokenId == AIRDROP_ID) {
             _name = "Airdrop";
         } else {
@@ -348,8 +362,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
      * It is required that the name of this contract is DO_NOT_DEPOSIT and the symbol is ALL_YOU_FUNDS_WILL_LOST.
      */
     function setPendingSeconds(uint seconds_) public {
-        require(hashCompareWithLengthCheck(name, "DO_NOT_DEPOSIT"), "only available on testnet");
-        require(hashCompareWithLengthCheck(symbol, "ALL_YOU_FUNDS_WILL_LOST"), "only available on testnet~");
+        require(hashCompareWithLengthCheck(name, "DO_NOT_DEPOSIT"), "403");
+        require(hashCompareWithLengthCheck(symbol, "ALL_YOU_FUNDS_WILL_LOST"), "403.");
         pendingSeconds = seconds_;
     }
 

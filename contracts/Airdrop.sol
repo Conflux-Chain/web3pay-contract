@@ -14,7 +14,7 @@ contract Airdrop is APPCoin {
     event Drop(address indexed to, uint256 amount, string reason);
     /** AppOwner could airdrop to user. */
     function airdrop(address to, uint256 amount, string memory reason) public {
-        require(balanceOf(msg.sender, AIRDROP_ID) == 1, "no permission");
+        require(balanceOf(msg.sender, AIRDROP_ID) == 1, "403");
         drops[to] += amount;
         _addNewUser(to);
         emit Drop(to, amount, reason);
@@ -40,7 +40,7 @@ contract Airdrop is APPCoin {
      * Will emit `Spend` event if airdrops are consumed.
      * Will always emit ERC20 `Transfer` event (even real quota consumed is zero).
      */
-    function charge(address account, uint256 amount, bytes memory data, ResourceUseDetail[] memory useDetail) public override onlyAppOwner whenNotPaused{
+    function _charge(address account, uint256 amount, bytes memory data, ResourceUseDetail[] memory useDetail) internal override whenNotPaused{
         uint256 dropBalance = drops[account];
         uint256 spendDrop = 0;
         uint256 spendSuper = amount;
@@ -60,6 +60,6 @@ contract Airdrop is APPCoin {
         }
         // even `spendSuper` is zero, this must be executed.
         // zero record could help tracking transfer transaction.
-        super.charge(account, spendSuper, data, useDetail);
+        super._charge(account, spendSuper, data, useDetail);
     }
 }

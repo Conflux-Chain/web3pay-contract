@@ -22,6 +22,7 @@ abstract contract AppConfig {
     uint256 public constant FT_ID = 0;
     uint256 public constant AIRDROP_ID = 1;
     uint256 public constant TAKE_PROFIT_ID = 2;
+    uint256 public constant BILLING_ID = 3;
     /** reserve gap */
     uint32 public constant FIRST_CONFIG_ID = 101;
     /** auto-increment id, starts from `FIRST_CONFIG_ID` */
