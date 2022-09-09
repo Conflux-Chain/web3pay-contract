@@ -22,6 +22,7 @@ abstract contract AppConfig {
     uint256 public constant FT_ID = 0;
     uint256 public constant AIRDROP_ID = 1;
     uint256 public constant TAKE_PROFIT_ID = 2;
+    uint256 public constant BILLING_ID = 3;
     /** reserve gap */
     uint32 public constant FIRST_CONFIG_ID = 101;
     /** auto-increment id, starts from `FIRST_CONFIG_ID` */
@@ -35,7 +36,7 @@ abstract contract AppConfig {
     //----- pending -----
     uint32[] public pendingIdArray;
     mapping(uint32=>bool) pendingIdMap;
-    uint256 public pendingSeconds = 3600 * 24 * 7;
+    uint256 public pendingSeconds;
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     enum OP {ADD/*0*/,UPDATE/*1*/,DELETE/*2*/, NO_PENDING/*3*/, PENDING_INIT_DEFAULT/*4*/}
@@ -80,31 +81,32 @@ abstract contract AppConfig {
     }
     function _configResource(ConfigRequest memory entry) internal {
         uint32 id = entry.id;
-        string memory resourceId = entry.resourceId;
-        uint256 weight = entry.weight;
+        // affects code size
+//        string memory resourceId = entry.resourceId;
+//        uint256 weight = entry.weight;
         OP op = entry.op;
         if (op == OP.ADD) {
             // id starts from `FIRST_CONFIG_ID`, if resourceId=>id > 0, it's added already.
-            require(resources[resourceId] == 0, 'resource already added');
-            require(id == 0, "id should be zero when adding");
+            require(resources[entry.resourceId] == 0, 'dup'); //resource already added
+            require(id == 0, "id != 0");//id should be zero when adding
 
             id = nextConfigId;
             nextConfigId += 1;
 
-            resources[resourceId] = id;
-            resourceConfigures[id] = ConfigEntry(resourceId, 0, uint32(indexArray.length), op, weight, block.timestamp, 0);
+            resources[entry.resourceId] = id;
+            resourceConfigures[id] = ConfigEntry(entry.resourceId, 0, uint32(indexArray.length), op, entry.weight, block.timestamp, 0);
             /*pending*/ //_mintConfig(address(this), id, weight, "add config");
 
             // track index.
             indexArray.push(id);
         } else if (op == OP.UPDATE) {
             require(id >= FIRST_CONFIG_ID, 'invalid id');
-            require(resources[resourceId] == id, 'id/resourceId mismatch');
-            setPendingProp(id, op, weight);
+            require(resources[entry.resourceId] == id, 'neq');//id/resourceId mismatch
+            setPendingProp(id, op, entry.weight);
         } else if (op == OP.DELETE) {
-            require(resources[resourceId] == id, 'resource id mismatch');
-            require(id > FIRST_CONFIG_ID, 'can not delete default entry');
-            setPendingProp(id, op, weight);
+            require(resources[entry.resourceId] == id, 'neq');//resource id mismatch
+            require(id > FIRST_CONFIG_ID, '403');//can not delete default entry
+            setPendingProp(id, op, entry.weight);
             /*pending
             uint32 lastIdValue = indexArray[indexArray.length - 1];
             indexArray.pop();
@@ -128,7 +130,7 @@ abstract contract AppConfig {
             pendingIdMap[id] = true;
             pendingIdArray.push(id);
         }
-        emit ResourcePending(id, weight, op);
+        emit ResourcePending(id, entry.weight, op);
     }
     function setPendingProp(uint32 id, OP op_, uint256 weight_) internal {
         resourceConfigures[id].pendingOP = op_;
@@ -214,6 +216,7 @@ abstract contract AppConfig {
         for(uint32 i=0; i<limit;i++) {
             uint32 id = indexArray[i];
             slice[i] = resourceConfigures[id];
+            slice[i].index = resources[slice[i].resourceId]; // use index as id
             offset ++;
         }
         return (slice, total);
