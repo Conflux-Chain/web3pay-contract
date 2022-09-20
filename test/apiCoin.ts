@@ -206,6 +206,7 @@ describe("ApiCoin", async function () {
     config2 = await app.resourceConfigures(102)
     assert(config2.pendingWeight.toNumber() == 200, 'pending weight should be updated')
     assert(config2.index == 1, 'index should be 1')
+    assert(config2.pendingOP == OP.ADD, 'should still pending on add')
 
     // id mismatch resource id
     await expect(
@@ -229,7 +230,8 @@ describe("ApiCoin", async function () {
     assert(await app.nextConfigId() == 106, 'next id should be 106');
     //
     const [list0,total0] = await app.listResources(0, 30);
-    assert(list0.length == 5, `should have 5 items, actual ${list0.length}`);
+    // inactive entries are deleted directly. 103 is deleted.
+    assert(list0.length == 4, `should have 4 items, actual ${list0.length}`);
     // hack pending seconds and flush configures.
     await app.setPendingSeconds(0).then(tx=>tx.wait())
     await app.flushPendingConfig().then(tx=>tx.wait())//.then(dumpEvent);
