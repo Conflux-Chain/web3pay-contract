@@ -343,11 +343,13 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         if (tokenId == FT_ID) {
             _name = name;
         } else if (tokenId == TAKE_PROFIT_ID) {
-            _name = "Funds";
+            _name = "Payee";
         } else if (tokenId == BILLING_ID) {
             _name = "Billing";
         } else if (tokenId == AIRDROP_ID) {
-            _name = "Airdrop";
+            _name = "Operator";
+        } else if (tokenId == TOKEN_AIRDROP_ID) {
+            _name = "Voucher";
         } else {
             _name = resourceConfigures[uint32(tokenId)].resourceId;
         }
