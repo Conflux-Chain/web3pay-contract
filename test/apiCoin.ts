@@ -276,13 +276,13 @@ describe("ApiCoin", async function () {
     //
     await expect(
       app2.safeTransferFrom(await app2.signer.getAddress(), api.address, 0, parseEther("1"), Buffer.from("")).then((res) => res.wait())
-    ).to.be.revertedWith(`Not permitted`);
+    ).to.be.revertedWith(`403`);
 
     await expect(
       app2
         .safeTransferFrom(await app2.signer.getAddress(), api.address, 0, parseEther("1"), Buffer.from(""))
         .then((res) => res.wait())
-    ).to.be.revertedWith(`Not permitted`);
+    ).to.be.revertedWith(`403`);
     //
     // await expect(
     //   app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
@@ -343,15 +343,15 @@ describe("ApiCoin", async function () {
     await app.freeze(acc1, true).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
-    ).to.be.revertedWith(`Frozen by admin`);
+    ).to.be.revertedWith(`Frozen`);
     await expect(
       app.withdrawRequest().then((res) => res.wait())
-    ).to.be.revertedWith(`Account is frozen`);
+    ).to.be.revertedWith(`Frozen`);
     // unfreeze
     await app.freeze(acc1, false).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
-    ).to.be.revertedWith(`Withdraw request first`);
+    ).to.be.revertedWith(`WRF`);
     await expect(app.withdrawRequest())
       .emit(app, app.interface.events["Frozen(address)"].name)
       .withArgs(acc1);
@@ -426,7 +426,7 @@ describe("ApiCoin", async function () {
   it("airdrop", async () => {
     const {api, app, app2} = await deployAndDeposit(signer2, "Airdrop");
     const badApp2 = app2 as any as Airdrop
-    await expect(badApp2.airdrop(acc1, parseEther('1'), "fail")).to.be.revertedWith(`403`)
+    await expect(badApp2.airdropBatch([acc1], [parseEther('1')], ["fail"])).to.be.revertedWith(`403`)
     const airdrop = app as any as Airdrop
     const tx = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']);
     await expect(tx).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)
