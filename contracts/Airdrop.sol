@@ -25,7 +25,4 @@ contract Airdrop is APPCoin {
         total = balanceOf(owner, FT_ID) + airdrop_;
     }
 
-    function configAirdropPrivilege(address account, bool add) external onlyAppOwner{
-        _configPrivilege(account, add, AIRDROP_ID);
-    }
 }

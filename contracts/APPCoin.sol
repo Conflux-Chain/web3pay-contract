@@ -125,13 +125,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             delete frozenMap[acc];
         }
     }
-    function configBillingPrivilege(address account, bool add) external onlyAppOwner {
-        _configPrivilege(account, add, BILLING_ID);
-    }
-    function configTakeProfitPrivilege(address account, bool add) external onlyAppOwner {
-        _configPrivilege(account, add, TAKE_PROFIT_ID);
-    }
-    function _configPrivilege(address account, bool add, uint id) internal  {
+
+    function configPrivilege(address account, bool add, uint id) external onlyAppOwner  {
         uint mark = balanceOf(account, id);
         if (add) {
             require(mark == 0, "dup");//already added
@@ -283,10 +278,10 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         symbol = symbol_;
         _setURI(uri_);
         apiCoin = apiCoin_;
+        _mint(appOwner_, TAKE_PROFIT_ID, 1, "");
+        _mint(appOwner_, AIRDROP_ID, 1, "");
+        _mint(appOwner_, BILLING_ID, 1, "");
         appOwner = appOwner_;
-        _configPrivilege(appOwner_, true, TAKE_PROFIT_ID);
-        _configPrivilege(appOwner_, true, AIRDROP_ID);
-        _configPrivilege(appOwner_, true, BILLING_ID);
         emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
         pendingSeconds = 3600 * 24 * 7;
