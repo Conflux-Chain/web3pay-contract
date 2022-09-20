@@ -206,6 +206,7 @@ describe("ApiCoin", async function () {
     config2 = await app.resourceConfigures(102)
     assert(config2.pendingWeight.toNumber() == 200, 'pending weight should be updated')
     assert(config2.index == 1, 'index should be 1')
+    assert(config2.pendingOP == OP.ADD, 'should still pending on add')
 
     // id mismatch resource id
     await expect(
@@ -229,7 +230,8 @@ describe("ApiCoin", async function () {
     assert(await app.nextConfigId() == 106, 'next id should be 106');
     //
     const [list0,total0] = await app.listResources(0, 30);
-    assert(list0.length == 5, `should have 5 items, actual ${list0.length}`);
+    // inactive entries are deleted directly. 103 is deleted.
+    assert(list0.length == 4, `should have 4 items, actual ${list0.length}`);
     // hack pending seconds and flush configures.
     await app.setPendingSeconds(0).then(tx=>tx.wait())
     await app.flushPendingConfig().then(tx=>tx.wait())//.then(dumpEvent);
@@ -276,13 +278,13 @@ describe("ApiCoin", async function () {
     //
     await expect(
       app2.safeTransferFrom(await app2.signer.getAddress(), api.address, 0, parseEther("1"), Buffer.from("")).then((res) => res.wait())
-    ).to.be.revertedWith(`Not permitted`);
+    ).to.be.revertedWith(`403`);
 
     await expect(
       app2
         .safeTransferFrom(await app2.signer.getAddress(), api.address, 0, parseEther("1"), Buffer.from(""))
         .then((res) => res.wait())
-    ).to.be.revertedWith(`Not permitted`);
+    ).to.be.revertedWith(`403`);
     //
     // await expect(
     //   app2.burn(parseEther("1"), Buffer.from("")).then((res) => res.wait())
@@ -343,15 +345,15 @@ describe("ApiCoin", async function () {
     await app.freeze(acc1, true).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
-    ).to.be.revertedWith(`Frozen by admin`);
+    ).to.be.revertedWith(`Frozen`);
     await expect(
       app.withdrawRequest().then((res) => res.wait())
-    ).to.be.revertedWith(`Account is frozen`);
+    ).to.be.revertedWith(`Frozen`);
     // unfreeze
     await app.freeze(acc1, false).then((res) => res.wait());
     await expect(
       app.forceWithdraw().then((res) => res.wait())
-    ).to.be.revertedWith(`Withdraw request first`);
+    ).to.be.revertedWith(`WRF`);
     await expect(app.withdrawRequest())
       .emit(app, app.interface.events["Frozen(address)"].name)
       .withArgs(acc1);
@@ -426,7 +428,7 @@ describe("ApiCoin", async function () {
   it("airdrop", async () => {
     const {api, app, app2} = await deployAndDeposit(signer2, "Airdrop");
     const badApp2 = app2 as any as Airdrop
-    await expect(badApp2.airdrop(acc1, parseEther('1'), "fail")).to.be.revertedWith(`403`)
+    await expect(badApp2.airdropBatch([acc1], [parseEther('1')], ["fail"])).to.be.revertedWith(`403`)
     const airdrop = app as any as Airdrop
     const tx = await airdrop.airdropBatch([acc1], [parseEther("10")], ['test']);
     await expect(tx).emit(airdrop, airdrop.interface.events["Drop(address,uint256,string)"].name)

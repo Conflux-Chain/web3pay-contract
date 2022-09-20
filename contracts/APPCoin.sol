@@ -32,6 +32,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     address public apiCoin;
     address public appOwner;
     event AppOwnerChanged(address indexed to);
+    event Spend(address indexed from, uint256 amount);//airdrop
+    event Drop(address indexed to, uint256 amount, string reason);//airdrop
     string public name;
     string public symbol;
     modifier onlyAppOwner() {
@@ -102,7 +104,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         uint256[] memory amounts,
         bytes memory data
     ) internal override {
-        require(from == address(0) || to == address(0) || msg.sender == owner(), 'Not permitted');
+        require(from == address(0) || to == address(0) || msg.sender == owner(), '403');
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
     // -------- owner/bill manager operation -----------
@@ -123,13 +125,8 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             delete frozenMap[acc];
         }
     }
-    function configBillingPrivilege(address account, bool add) external onlyAppOwner {
-        _configPrivilege(account, add, BILLING_ID);
-    }
-    function configTakeProfitPrivilege(address account, bool add) external onlyAppOwner {
-        _configPrivilege(account, add, TAKE_PROFIT_ID);
-    }
-    function _configPrivilege(address account, bool add, uint id) internal  {
+
+    function configPrivilege(address account, bool add, uint id) external onlyAppOwner  {
         uint mark = balanceOf(account, id);
         if (add) {
             require(mark == 0, "dup");//already added
@@ -153,10 +150,32 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
             _charge(request.account, request.amount, request.data, request.useDetail);
         }
     }
-    /** @dev Charge fee*/
+    /**
+     * Charge account's quota.
+     * Will emit `Spend` event if airdrops are consumed.
+     * Will always emit ERC20 `Transfer` event (even real quota consumed is zero).
+     */
     function charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) public virtual whenNotPaused{
         require(balanceOf(msg.sender, TAKE_PROFIT_ID) == 1, "403");//check permission
-        _charge(account, amount, "", useDetail);
+        // consume airdrop
+        uint256 spendDrop = 0;
+        uint256 spendSuper = amount;
+        uint256 airdrop = balanceOf(account, TOKEN_AIRDROP_ID);
+        if (airdrop >= amount) {
+            // all amount is covered by airdrop.
+            spendDrop = amount;
+            spendSuper = 0;
+        } else if (airdrop > 0){
+            //  partial amount is covered by airdrop.
+            spendDrop = airdrop;
+            spendSuper = amount - airdrop;
+        }
+
+        if (spendDrop > 0) {
+            _burnConfig(account, TOKEN_AIRDROP_ID, spendDrop);
+            emit Spend(account, spendDrop);
+        }
+        _charge(account, spendSuper, "", useDetail);
     }
     /* charge without checking billing permission. **/
     function _charge(address account, uint256 amount, bytes memory /*data*/, ResourceUseDetail[] memory useDetail) internal virtual whenNotPaused{
@@ -182,24 +201,20 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
 
         if (frozenMap[account] > 1) {
             // refund
-            uint256 appCoinLeft = balanceOf(account, FT_ID);
-            _burn(account, FT_ID, appCoinLeft);
-            IERC777(apiCoin).send(account, appCoinLeft, "refund");
-            delete frozenMap[account];
-            emit Withdraw(account, appCoinLeft);
+            _withdraw(account, "refund");
         }
     }
     // -------- api consumer operation -----------
     /** @dev Used by an API consumer to send a withdraw request, API key related to the caller will be frozen. */
     function withdrawRequest() public whenNotPaused {
-        require(frozenMap[msg.sender] == 0, 'Account is frozen');
+        require(frozenMap[msg.sender] == 0, 'Frozen');
         frozenMap[msg.sender] = block.timestamp;
         emit Frozen(msg.sender);
     }
     /** @dev After the delay time expires, the user can withdraw the remaining funds. */
     function forceWithdraw() public whenNotPaused {
-        require(frozenMap[msg.sender] != 1, 'Frozen by admin');
-        require(frozenMap[msg.sender] > 0, 'Withdraw request first');
+        require(frozenMap[msg.sender] != 1, 'Frozen');
+        require(frozenMap[msg.sender] > 0, 'WRF');//Withdraw request first
         require(block.timestamp - frozenMap[msg.sender] > forceWithdrawDelay, 'Waiting time');
         _withdraw(msg.sender, "force");
     }
@@ -208,11 +223,14 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         require(balanceOf(msg.sender, AIRDROP_ID) == 1, "403");//check permission
         _withdraw(account, "refund");
     }
-    function _withdraw(address account, bytes memory /*reason*/) internal {
+    function _withdraw(address account, bytes memory reason) internal {
         uint256 appCoinLeft = balanceOf(account, FT_ID);
         _burn(account, FT_ID, appCoinLeft);
-//        IERC777(apiCoin).send(account, appCoinLeft, reason);
-        _swapApiCoin(appCoinLeft, account);
+        if (IAPICoin(apiCoin).baseToken() == address(0)) {
+            IERC777(apiCoin).send(account, appCoinLeft, reason);
+        } else {
+            _swapApiCoin(appCoinLeft, account);
+        }
         delete frozenMap[account];
         emit Withdraw(account, appCoinLeft);
     }
@@ -230,7 +248,7 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
     }
     // ------------ public -------------
     function listUser(uint256 offset, uint256 limit) public view returns (UserCharged[] memory, uint256 total){
-        require(offset <= allUserArray.length, 'invalid offset');
+        require(offset <= allUserArray.length);
         if (offset + limit >= allUserArray.length) {
             limit = allUserArray.length - offset;
         }
@@ -260,10 +278,10 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         symbol = symbol_;
         _setURI(uri_);
         apiCoin = apiCoin_;
+        _mint(appOwner_, TAKE_PROFIT_ID, 1, "");
+        _mint(appOwner_, AIRDROP_ID, 1, "");
+        _mint(appOwner_, BILLING_ID, 1, "");
         appOwner = appOwner_;
-        _configPrivilege(appOwner_, true, TAKE_PROFIT_ID);
-        _configPrivilege(appOwner_, true, AIRDROP_ID);
-        _configPrivilege(appOwner_, true, BILLING_ID);
         emit AppOwnerChanged(appOwner_);
         forceWithdrawDelay = 3600;
         pendingSeconds = 3600 * 24 * 7;
@@ -320,11 +338,13 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
         if (tokenId == FT_ID) {
             _name = name;
         } else if (tokenId == TAKE_PROFIT_ID) {
-            _name = "Funds";
+            _name = "Payee";
         } else if (tokenId == BILLING_ID) {
             _name = "Billing";
         } else if (tokenId == AIRDROP_ID) {
-            _name = "Airdrop";
+            _name = "Operator";
+        } else if (tokenId == TOKEN_AIRDROP_ID) {
+            _name = "Voucher";
         } else {
             _name = resourceConfigures[uint32(tokenId)].resourceId;
         }

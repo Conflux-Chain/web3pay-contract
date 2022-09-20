@@ -20,9 +20,10 @@ abstract contract AppConfig {
     }
     /* token id for fungible token (ERC20, APP Coin) */
     uint256 public constant FT_ID = 0;
-    uint256 public constant AIRDROP_ID = 1;
-    uint256 public constant TAKE_PROFIT_ID = 2;
-    uint256 public constant BILLING_ID = 3;
+    uint256 public constant AIRDROP_ID = 1; // privilege
+    uint256 public constant TAKE_PROFIT_ID = 2; // privilege
+    uint256 public constant BILLING_ID = 3; // privilege
+    uint256 public constant TOKEN_AIRDROP_ID = 4; // token
     /** reserve gap */
     uint32 public constant FIRST_CONFIG_ID = 101;
     /** auto-increment id, starts from `FIRST_CONFIG_ID` */
@@ -100,12 +101,19 @@ abstract contract AppConfig {
             // track index.
             indexArray.push(id);
         } else if (op == OP.UPDATE) {
+            // Only update weights are supported.
             require(id >= FIRST_CONFIG_ID, 'invalid id');
             require(resources[entry.resourceId] == id, 'neq');//id/resourceId mismatch
             setPendingProp(id, op, entry.weight);
         } else if (op == OP.DELETE) {
             require(resources[entry.resourceId] == id, 'neq');//resource id mismatch
             require(id > FIRST_CONFIG_ID, '403');//can not delete default entry
+            if (resourceConfigures[id].pendingOP == OP.ADD) {
+                resourceConfigures[id].pendingOP = OP.DELETE;
+                // inactive entry, delete directly
+                _flushPendingConfig(0);
+                return;
+            }
             setPendingProp(id, op, entry.weight);
             /*pending
             uint32 lastIdValue = indexArray[indexArray.length - 1];
@@ -133,6 +141,9 @@ abstract contract AppConfig {
         emit ResourcePending(id, entry.weight, op);
     }
     function setPendingProp(uint32 id, OP op_, uint256 weight_) internal {
+        if (resourceConfigures[id].pendingOP == OP.ADD && op_ == OP.UPDATE) {
+            op_ = OP.ADD;// keep adding if an entry is not active
+        }
         resourceConfigures[id].pendingOP = op_;
         resourceConfigures[id].pendingWeight = weight_;
         resourceConfigures[id].submitSeconds = block.timestamp;
