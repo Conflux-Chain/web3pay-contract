@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./AppCoin.sol";
@@ -34,7 +35,7 @@ interface ISwap {
 /**
  * @dev SwapExchage is used to deposit/withdraw App Coins based on native tokens.
  */
-contract SwapExchage {
+contract SwapExchage is ReentrancyGuard {
     AppCoin private appCoin;
     ISwap private swap;
 
@@ -73,7 +74,7 @@ contract SwapExchage {
      * - amount: amount of App Coins to deposit.
      * - receiver: address to receive the App Coins.
      */
-    function depositETH(uint256 amount, address receiver) public payable {
+    function depositETH(uint256 amount, address receiver) public payable nonReentrant {
         amount = appCoin.previewMint(amount);
 
         uint256 balanceBefore = address(this).balance - msg.value;
@@ -121,7 +122,7 @@ contract SwapExchage {
      * - amount: amount of App Coins to withdraw.
      * - receiver: address to receive the ETH.
      */
-    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public {
+    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public nonReentrant {
         // requires user to approve AppCoin to this SwapExchange
         SafeERC20.safeTransferFrom(appCoin, msg.sender, address(this), amount);
 
