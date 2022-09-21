@@ -36,8 +36,8 @@ interface ISwap {
  * @dev SwapExchage is used to deposit/withdraw App Coins based on native tokens.
  */
 contract SwapExchage is ReentrancyGuard {
-    AppCoin private appCoin;
-    ISwap private swap;
+    AppCoin public appCoin;
+    ISwap public swap;
 
     /**
      * @dev For initialization in proxy constructor.
