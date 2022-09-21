@@ -2,6 +2,7 @@ import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
 import {APICoin, Cards, CardShop, CardTemplate, CardTracker, IERC20, ISwap, TokenRouter} from "../typechain";
+import fs from "fs";
 export const tokensNet71 = {
 	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
 	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
@@ -92,7 +93,7 @@ export async function deploy(name:string, args:any[]) {
 	console.log(name+" deployed to:", deployer.address);
 	return instance;
 }
-
+export const DEPLOY_CARD_INFO = `./artifacts/deploy-card.json.txt`;
 export async function deployCardContracts() {
 	const shop = await deploy("CardShop", []) as CardShop;
 	const name = "package", symbol = "pkg"
@@ -100,5 +101,12 @@ export async function deployCardContracts() {
 	const template = await deploy("CardTemplate", []) as CardTemplate;
 	const tracker = await deploy("CardTracker", [inst.address]) as CardTracker;
 	await shop.setContracts(template.address, inst.address, tracker.address).then(waitTx)
+	const deployInfo = {
+		shop: shop.address,
+		cards: inst.address,
+		template: template.address,
+		tracker: tracker.address,
+	}
+	await fs.writeFileSync(DEPLOY_CARD_INFO, JSON.stringify(deployInfo, null, 4))
 	return {shop, template, inst, tracker}
 }
