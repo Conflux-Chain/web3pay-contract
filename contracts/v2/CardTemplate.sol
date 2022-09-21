@@ -17,6 +17,8 @@ contract CardTemplate is ITemplate{
         if (t.id == 0) {
             t.id = nextId;
             nextId += 1;
+        } else if (t.id >= nextId) {
+            revert("invalid id");
         }
         templates[t.id] = t;
     }

@@ -1,15 +1,11 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import {deploy, waitTx} from "../scripts/lib";
-import {PackageInstance, PackageShop, PackageTemplate} from "../typechain";
+import {deploy, deployCardContracts, waitTx} from "../scripts/lib";
+import {CardShop, Cards, CardTemplate} from "../typechain";
 
 describe("Greeter", function () {
   it("Should ok", async function () {
-    const shop = await deploy("PackageShop", []) as PackageShop;
-    const name = "package", symbol = "pkg"
-    const inst = await deploy("PackageInstance", [name, symbol]) as PackageInstance;
-    const template = await deploy("PackageTemplate", []) as PackageTemplate;
-    await shop.setContracts(template.address, inst.address).then(waitTx)
+    const {shop, template, inst} = await deployCardContracts();
     //
     await template.config({
       closeSaleAt: 0,
@@ -17,6 +13,7 @@ describe("Greeter", function () {
       duration: 3600,
       icon: "icon.ico",
       id: 0,
+      level: 1,
       name: "name",
       openSaleAt: 3,
       price: 4,
