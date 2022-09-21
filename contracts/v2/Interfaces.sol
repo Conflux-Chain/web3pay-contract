@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-interface PackageInterface {
+interface ITemplate {
     struct Template {
         uint id;
         string name;
@@ -14,15 +14,20 @@ interface PackageInterface {
         uint   closeSaleAt;
         uint8  status;
         uint   salesLimit;
+        uint8 level;
     }
-    struct Package {
+
+    function getTemplate(uint id) external returns (Template memory);
+}
+interface ICard {
+    struct Card {
         uint id;
         uint templateId;
         string name;
         string description;
         string icon;
         uint duration;
+        uint8 level;
     }
-    function getTemplate(uint id) external returns (Template memory);
-    function makePackage(address to, Package memory t) external;
+    function makeCard(address to, Card memory t) external;
 }

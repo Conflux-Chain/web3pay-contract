@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
-import "./PackageInterface.sol";
+import "./Interfaces.sol";
 
 //import "hardhat/console.sol";
 
-contract PackageTemplate {
+contract CardTemplate is ITemplate{
     uint public nextId = 1;
-    mapping(uint=>PackageInterface.Template) templates;
+    mapping(uint=>Template) templates;
 
-    function getTemplate(uint id) public view returns (PackageInterface.Template memory t) {
+    function getTemplate(uint id) public view override returns (Template memory t) {
         t = templates[id];
         //console.log("get template, duration is :", t.duration);
     }
 
-    function config(PackageInterface.Template memory t) external {
+    function config(Template memory t) external {
         if (t.id == 0) {
             t.id = nextId;
             nextId += 1;

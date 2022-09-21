@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./PackageInterface.sol";
+import "./Interfaces.sol";
 
 import "hardhat/console.sol";
 
-contract PackageInstance {
+contract Cards is ICard{
     uint nextId = 1;
-    mapping(uint=>PackageInterface.Package) packages;
+    mapping(uint=>Card) packages;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -32,7 +32,7 @@ contract PackageInstance {
         _symbol = symbol_;
     }
 
-    function makePackage(address to, PackageInterface.Package memory t) external {
+    function makeCard(address to, Card memory t) external override{
         t.id = nextId;
         nextId += 1;
         packages[t.id] = t;
@@ -59,7 +59,7 @@ contract PackageInstance {
     }
 
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        PackageInterface.Package memory p = packages[tokenId];
+        ICard.Card memory p = packages[tokenId];
         string memory tid = Strings.toString(p.templateId);
         string memory duration = Strings.toString(p.duration);
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
