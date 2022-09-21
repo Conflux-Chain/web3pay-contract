@@ -38,11 +38,9 @@ contract SwapExchage {
     AppCoin private appCoin;
     ISwap private swap;
 
-    modifier onlyInitialized() {
-        require(address(appCoin) != address(0), "SwapExchage: uninitialized yet");
-        _;
-    }
-
+    /**
+     * @dev For initialization in proxy constructor.
+     */
     function initialize(AppCoin appCoin_, ISwap swap_) public {
         require(address(appCoin) == address(0), "SwapExchage: already initialized");
 
@@ -56,7 +54,7 @@ contract SwapExchage {
      * Parameters:
      * - amount: amount of App Coins to deposit.
      */
-    function previewDepositETH(uint256 amount) public view onlyInitialized returns (uint256) {
+    function previewDepositETH(uint256 amount) public view returns (uint256) {
         amount = appCoin.previewMint(amount);
 
         address[] memory path = new address[](2);
@@ -75,7 +73,7 @@ contract SwapExchage {
      * - amount: amount of App Coins to deposit.
      * - receiver: address to receive the App Coins.
      */
-    function depositETH(uint256 amount, address receiver) public payable onlyInitialized {
+    function depositETH(uint256 amount, address receiver) public payable {
         amount = appCoin.previewMint(amount);
 
         uint256 balanceBefore = address(this).balance - msg.value;
@@ -85,7 +83,7 @@ contract SwapExchage {
         path[1] = appCoin.asset();
 
         // swap ETH for tokens
-        swap.swapETHForExactTokens{value: msg.value}(amount, path, receiver, block.timestamp);
+        swap.swapETHForExactTokens{value: msg.value}(amount, path, address(this), block.timestamp);
 
         // approve and deposit for receiver
         SafeERC20.safeApprove(IERC20(appCoin.asset()), address(appCoin), amount);
@@ -104,7 +102,7 @@ contract SwapExchage {
      * Parameters:
      * - amount: amount of App Coins to withdraw.
      */
-    function previewWithdrawETH(uint256 amount) public view onlyInitialized returns (uint256) {
+    function previewWithdrawETH(uint256 amount) public view returns (uint256) {
         amount = appCoin.previewRedeem(amount);
 
         address[] memory path = new address[](2);
@@ -113,7 +111,7 @@ contract SwapExchage {
 
         uint[] memory amounts = swap.getAmountsOut(amount, path);
 
-        return amounts[0];
+        return amounts[1];
     }
 
     /**
@@ -123,7 +121,7 @@ contract SwapExchage {
      * - amount: amount of App Coins to withdraw.
      * - receiver: address to receive the ETH.
      */
-    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public onlyInitialized {
+    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public {
         // requires user to approve AppCoin to this SwapExchange
         SafeERC20.safeTransferFrom(appCoin, msg.sender, address(this), amount);
 
