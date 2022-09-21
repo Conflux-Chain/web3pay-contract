@@ -1,7 +1,7 @@
 import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
-import {APICoin, Cards, CardShop, CardTemplate, IERC20, ISwap, TokenRouter} from "../typechain";
+import {APICoin, Cards, CardShop, CardTemplate, CardTracker, IERC20, ISwap, TokenRouter} from "../typechain";
 export const tokensNet71 = {
 	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
 	ppi: "0x49916ba65d0048c4bbb0a786a527d98d10a1cd2d", // ppi
@@ -98,6 +98,7 @@ export async function deployCardContracts() {
 	const name = "package", symbol = "pkg"
 	const inst = await deploy("Cards", [name, symbol]) as Cards;
 	const template = await deploy("CardTemplate", []) as CardTemplate;
-	await shop.setContracts(template.address, inst.address).then(waitTx)
-	return {shop, template, inst}
+	const tracker = await deploy("CardTracker", [inst.address]) as CardTracker;
+	await shop.setContracts(template.address, inst.address, tracker.address).then(waitTx)
+	return {shop, template, inst, tracker}
 }

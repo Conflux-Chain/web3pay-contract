@@ -11,9 +11,11 @@ import "./Interfaces.sol";
 contract CardShop {
     ITemplate template;
     ICard instance;
-    function setContracts(ITemplate template_, ICard instance_) public {
+    ICardTracker tracker;
+    function setContracts(ITemplate template_, ICard instance_, ICardTracker tracker_) public {
         template = template_;
         instance = instance_;
+        tracker = tracker_;
     }
     function buy(uint templateId) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
@@ -28,6 +30,6 @@ contract CardShop {
             t.duration,
             t.level
         );
-        instance.makeCard(msg.sender, p);
+        instance.makeCard(msg.sender, p, tracker);
     }
 }

@@ -32,13 +32,14 @@ contract Cards is ICard{
         _symbol = symbol_;
     }
 
-    function makeCard(address to, Card memory t) external override{
+    function makeCard(address to, Card memory t, ICardTracker tracker) external override{
         t.id = nextId;
         nextId += 1;
         packages[t.id] = t;
 
         _balances[to] += 1;
         _owners[t.id] = to;
+        tracker.track(address(0), to, t);
         emit Transfer(address(0), to, t.id);
     }
 
