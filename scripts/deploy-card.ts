@@ -1,12 +1,13 @@
 import {ethers, upgrades} from "hardhat";
 import {
+    Cards, CardShop, CardTemplate, CardTracker
 } from "../typechain";
 const {parseEther, formatEther} = ethers.utils
 import {verifyContract} from "./verify-scan";
 import {
     approveERC20,
     attach,
-    deploy, deployCardContracts,
+    deploy, DEPLOY_CARD_INFO, deployCardContracts,
     depositTokens,
     getDeadline,
     mintERC20,
@@ -23,19 +24,17 @@ async function main() {
     await mint();
 }
 async function attachShop() {
-    let templateAt = "", instAt = "", shopAt = "";
-    shopAt = "0x8454d1D17Eb0227E04B1235fB1c53C4870E69337"
-    instAt = "0xE6aED4445437cA8BcA38078b0787C4840e4CeCf7";
-    templateAt = "0x4d9422b4363e8cC43a4172BBA4fAeB0964BD16C5";
-    const inst = await attach("PackageInstance", instAt)
-    const template = await attach("PackageTemplate", templateAt)
-    const shop = await attach("PackageShop", shopAt)
-    return {shop, template, inst}
+    const {shop:shopAt, cards:instAt, template:templateAt, tracker:trackerAt} = JSON.parse(fs.readFileSync(DEPLOY_CARD_INFO).toString())
+    const inst = await attach("Cards", instAt) as Cards
+    const template = await attach("CardTemplate", templateAt) as CardTemplate
+    const shop = await attach("CardShop", shopAt) as CardShop
+    const tracker = await attach("CardTracker", trackerAt) as CardTracker
+    return {shop, template, inst, tracker}
 }
 
 async function mint() {
-    // const {shop, template, inst} = await attachShop();
-    const {shop, template, inst} = await deployCardContracts();
+    const {shop, template, inst} = await attachShop();
+    // const {shop, template, inst} = await deployCardContracts();
     //
     await template.config({
         closeSaleAt: 0,
