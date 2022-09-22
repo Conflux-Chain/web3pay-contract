@@ -21,6 +21,7 @@
     "@openzeppelin/contracts": "~4.7.0",
     "@openzeppelin/contracts-upgradeable": "~4.7.0",
     "@openzeppelin/hardhat-upgrades": "~1.19.0",
+    "@confluxfans/contracts": "~0.3.0",
     "hardhat": "^2.9.9",
     "hardhat-erc1820": "^0.1.0",
     "js-conflux-sdk": "^2.1.4",

@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./AppCoin.sol";
+import "./AppCoinV2.sol";
 
 /** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
 interface ISwap {
@@ -33,16 +33,16 @@ interface ISwap {
 }
 
 /**
- * @dev SwapExchage is used to deposit/withdraw App Coins based on native tokens.
+ * @dev SwapExchange is used to deposit/withdraw App Coins based on native tokens.
  */
-contract SwapExchage is ReentrancyGuard {
-    AppCoin private appCoin;
-    ISwap private swap;
+contract SwapExchange is ReentrancyGuard {
+    AppCoinV2 public appCoin;
+    ISwap public swap;
 
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(AppCoin appCoin_, ISwap swap_) public {
+    function initialize(AppCoinV2 appCoin_, ISwap swap_) public {
         require(address(appCoin) == address(0), "SwapExchage: already initialized");
 
         appCoin = appCoin_;
