@@ -10,6 +10,14 @@ import "./VipCoinWithdraw.sol";
  */
 contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
 
+    /**
+     * @dev For initialization in proxy constructor.
+     */
+    function initialize(IERC20 appCoin_, VipCoin vipCoin_, uint256 deferTimeSecs_) public {
+        _initialize(appCoin_, vipCoin_);
+        deferTimeSecs = deferTimeSecs_;
+    }
+
     // TODO allow user to use CFX for deposit/withdrawal based on swap.
 
     // TODO integrate API weight contract to consume VIP coins.

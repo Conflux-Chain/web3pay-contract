@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./VipCoin.sol";
 
-contract AppCore {
+abstract contract AppCore {
 
     IERC20 public appCoin;
     VipCoin public vipCoin;
@@ -13,7 +13,7 @@ contract AppCore {
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(IERC20 appCoin_, VipCoin vipCoin_) public {
+    function _initialize(IERC20 appCoin_, VipCoin vipCoin_) internal {
         require(address(appCoin) == address(0), "App: already initialized");
 
         appCoin = appCoin_;
