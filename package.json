@@ -11,9 +11,11 @@
     "docgen-sol-doesn't work": "hardhat docgen",
     "start-hardhat-node": "hardhat node",
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
+    "test-card-deploy": "hardhat --network test run scripts/deploy-card.ts",
     "test-accounts": "hardhat --network test accounts",
     "doc": "solidity-docgen --solc-module solc-0-8",
     "test-local": "hardhat test ./test/apiCoin.ts",
+    "test-card": "hardhat test test/card-test.ts",
     "size-contracts": "yarn run hardhat size-contracts --no-compile",
     "test-token-router": "hardhat --network test run scripts/tokenRouter.ts"
   },
