@@ -33,9 +33,9 @@ interface ISwap {
 }
 
 /**
- * @dev SwapExchage is used to deposit/withdraw App Coins based on native tokens.
+ * @dev SwapExchange is used to deposit/withdraw App Coins based on native tokens.
  */
-contract SwapExchage is ReentrancyGuard {
+contract SwapExchange is ReentrancyGuard {
     AppCoin public appCoin;
     ISwap public swap;
 
