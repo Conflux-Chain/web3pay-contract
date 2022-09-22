@@ -11,9 +11,6 @@ import "./VipCoin.sol";
  */
 contract App is AccessControlEnumerable, ReentrancyGuard {
 
-    event Deposit(address indexed operator, address indexed receiver, uint256 amount);
-    event Airdrop(address indexed operator, address indexed receiver, uint256 amount, string reason);
-
     uint256 private constant TOKEN_ID_COIN = 0;
     uint256 private constant TOKEN_ID_AIRDROP = 1;
 
@@ -49,15 +46,13 @@ contract App is AccessControlEnumerable, ReentrancyGuard {
     function deposit(uint256 amount, address receiver) public nonReentrant {
         SafeERC20.safeTransferFrom(appCoin, _msgSender(), address(this), amount);
         vipCoin.mint(receiver, TOKEN_ID_COIN, amount, "");
-        emit Deposit(_msgSender(), receiver, amount);
     }
 
     /**
      * @dev Air drops `amount` of VIP coins for `receiver`.
      */
-    function airdrop(address receiver, uint256 amount, string memory reason) public nonReentrant onlyRole(AIRDROP_ROLE) {
+    function airdrop(address receiver, uint256 amount) public nonReentrant onlyRole(AIRDROP_ROLE) {
         vipCoin.mint(receiver, TOKEN_ID_AIRDROP, amount, "");
-        emit Airdrop(_msgSender(), receiver, amount, reason);
     }
 
     /**
@@ -75,7 +70,6 @@ contract App is AccessControlEnumerable, ReentrancyGuard {
 
         for (uint256 i = 0; i < receivers.length; i++) {
             vipCoin.mint(receivers[i], TOKEN_ID_AIRDROP, amounts[i], "");
-            emit Airdrop(_msgSender(), receivers[i], amounts[i], reasons[i]);
         }
     }
 
