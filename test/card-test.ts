@@ -18,7 +18,7 @@ describe("Greeter", function () {
       openSaleAt: 3,
       price: 4,
       salesLimit: 2,
-      showPrice: 100,
+      listPrice: 100,
       status: 1
     }).then(waitTx)
     let nextId = await template.nextId()

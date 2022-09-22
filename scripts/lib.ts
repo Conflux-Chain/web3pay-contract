@@ -100,7 +100,7 @@ export async function deployCardContracts() {
 	const inst = await deploy("Cards", [name, symbol]) as Cards;
 	const template = await deploy("CardTemplate", []) as CardTemplate;
 	const tracker = await deploy("CardTracker", [inst.address]) as CardTracker;
-	await shop.setContracts(template.address, inst.address, tracker.address).then(waitTx)
+	await shop.initialize(template.address, inst.address, tracker.address).then(waitTx)
 	const deployInfo = {
 		shop: shop.address,
 		cards: inst.address,
