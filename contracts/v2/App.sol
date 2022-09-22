@@ -3,13 +3,12 @@ pragma solidity ^0.8.4;
 
 import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
+import "./VipCoinWithdraw.sol";
 
 /**
  * @dev App represents an application to provide API or functionality service.
  */
-contract App is AppCore, VipCoinDeposit {
-
-    // TODO allow user to force withdraw coins from deposit.
+contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
 
     // TODO allow user to use CFX for deposit/withdrawal based on swap.
 
