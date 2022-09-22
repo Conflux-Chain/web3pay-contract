@@ -8,17 +8,13 @@ describe("Greeter", function () {
     const {shop, template, inst} = await deployCardContracts();
     //
     await template.config({
-      closeSaleAt: 0,
       description: "desc",
       duration: 3600,
       icon: "icon.ico",
       id: 0,
       level: 1,
       name: "name",
-      openSaleAt: 3,
       price: 4,
-      salesLimit: 2,
-      listPrice: 100,
       status: 1
     }).then(waitTx)
     let nextId = await template.nextId()

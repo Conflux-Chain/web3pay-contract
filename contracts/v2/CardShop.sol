@@ -4,25 +4,28 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "./Interfaces.sol";
+import "./Cards.sol";
+import "./CardTemplate.sol";
+import "./CardTracker.sol";
 
 //import "hardhat/console.sol";
 
+//TODO access control
 contract CardShop {
-    ITemplateRegistry public template;
-    ICardFactory public instance;
-    ICardTracker public tracker;
-    function initialize(ITemplateRegistry template_, ICardFactory instance_, ICardTracker tracker_) public {
+    CardTemplate public template;
+    Cards public instance;
+    CardTracker public tracker;
+    function initialize(CardTemplate template_, Cards instance_, CardTracker tracker_) public {
         template = template_;
         instance = instance_;
         tracker = tracker_;
     }
     function buy(uint templateId) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
-        ITemplateRegistry.Template memory t = template.getTemplate(templateId);
-        require(t.id>0);
-        ICardFactory.Card memory card = ICardFactory.Card(
-            0,//id
+        CardTemplate.Template memory t = template.getTemplate(templateId);
+        require(t.id>0, "template not found");
+        Cards.Card memory card = Cards.Card(
+            templateId,//id
             templateId,
             t.name,
             t.description,
@@ -30,6 +33,7 @@ contract CardShop {
             t.duration,
             t.level
         );
-        instance.makeCard(msg.sender, card, tracker);
+        //TODO buy more than 1 at once
+        instance.makeCard(msg.sender, card, 1, tracker);
     }
 }

@@ -96,8 +96,8 @@ export async function deploy(name:string, args:any[]) {
 export const DEPLOY_CARD_INFO = `./artifacts/deploy-card.json.txt`;
 export async function deployCardContracts() {
 	const shop = await deploy("CardShop", []) as CardShop;
-	const name = "package", symbol = "pkg"
-	const inst = await deploy("Cards", [name, symbol]) as Cards;
+	const name = "Cards Test", symbol = "cards"
+	const inst = await deploy("Cards", [name, symbol, ""]) as Cards;
 	const template = await deploy("CardTemplate", []) as CardTemplate;
 	const tracker = await deploy("CardTracker", [inst.address]) as CardTracker;
 	await shop.initialize(template.address, inst.address, tracker.address).then(waitTx)

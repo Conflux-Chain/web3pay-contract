@@ -1,66 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
-//import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
+import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Metadata.sol";
+import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./Interfaces.sol";
 
 import "hardhat/console.sol";
+import "./CardTracker.sol";
 
-contract Cards is ICardFactory {
-    uint nextId = 1;
+//TODO access control
+contract Cards is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata {
+    struct Card {
+        uint id;
+        uint templateId;
+        string name;
+        string description;
+        string icon;
+        uint duration;
+        uint8 level;
+    }
+    //TODO add query functions
+    //save card information.
     mapping(uint=>Card) cards;
 
-    // Mapping from token ID to owner address
-    mapping(uint256 => address) private _owners;
-
-    // Mapping owner address to token count
-    mapping(address => uint256) private _balances;
-
-    // Token name
-    string private _name;
-
-    // Token symbol
-    string private _symbol;
-
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-
-    constructor(string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
+    constructor(
+        string memory name,
+        string memory symbol,
+        string memory uri_
+    ) ERC1155PresetMinterPauser(uri_) CRC1155Metadata(name, symbol)  {
     }
 
-    function makeCard(address to, Card memory card, ICardTracker tracker) external override{
-        card.id = nextId;
-        nextId += 1;
+    function makeCard(address to, Card memory card, uint amount, CardTracker tracker) external {
+        _mint(to, card.id, amount, "");
         cards[card.id] = card;
-
-        _balances[to] += 1;
-        _owners[card.id] = to;
         tracker.applyCard(address(0), to, card);
-        emit Transfer(address(0), to, card.id);
     }
 
-    function name() public view virtual returns (string memory) {
-        return _name;
-    }
-
-    /**
-     * @dev See {IERC721Metadata-symbol}.
-     */
-    function symbol() public view virtual returns (string memory) {
-        return _symbol;
-    }
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return
-        interfaceId == type(IERC721).interfaceId ||
-        interfaceId == type(IERC721Metadata).interfaceId;
-    }
-
-    function tokenURI(uint256 tokenId) external view returns (string memory) {
-        ICardFactory.Card memory card = cards[tokenId];
+    function uri(uint256 tokenId) public view override (ERC1155, IERC1155MetadataURI) returns (string memory) {
+        Card memory card = cards[tokenId];
         string memory tid = Strings.toString(card.templateId);
         string memory duration = Strings.toString(card.duration);
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
@@ -74,5 +53,27 @@ contract Cards is ICardFactory {
             abi.encodePacked("data:application/json;base64,", json)
         );
         return output;
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override(ERC1155PresetMinterPauser, CRC1155Enumerable) {
+        //TODO restrict transfer
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+    public
+    view
+    virtual
+    override(ERC1155PresetMinterPauser, CRC1155Enumerable, IERC165)
+    returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

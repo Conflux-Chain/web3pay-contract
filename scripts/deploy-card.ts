@@ -20,7 +20,7 @@ import * as fs from "fs";
 
 async function main() {
     const  {signer, account:acc1} = await networkInfo()
-    // await deployPkgShop()
+    await deployCardContracts();
     await mint();
 }
 async function attachShop() {
@@ -37,21 +37,17 @@ async function mint() {
     // const {shop, template, inst} = await deployCardContracts();
     //
     await template.config({
-        closeSaleAt: 0,
         description: "这是一个测试描述😂",
         duration: 3600,
         icon: "/favicon.ico",
         id: 0,
         level: 1,
         name: "name名称",
-        openSaleAt: 0,
         price: 1,
-        salesLimit: 0,
-        showPrice: 100,
         status: 0
     }).then(waitTx)
-    let nextId = await template.nextId()
-    await shop.buy(nextId.sub(1))
+    const {transactionHash} = await shop.buy(1).then(waitTx)
+    console.log(`buy card tx hash ${transactionHash}`)
 }
 
 main().catch((error) => {
