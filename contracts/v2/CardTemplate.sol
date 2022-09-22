@@ -4,7 +4,7 @@ import "./Interfaces.sol";
 
 //import "hardhat/console.sol";
 
-contract CardTemplate is ITemplate{
+contract CardTemplate is ITemplateRegistry {
     uint public nextId = 1;
     mapping(uint=>Template) templates;
 
@@ -13,13 +13,13 @@ contract CardTemplate is ITemplate{
         //console.log("get template, duration is :", t.duration);
     }
 
-    function config(Template memory t) external {
-        if (t.id == 0) {
-            t.id = nextId;
+    function config(Template memory template) external {
+        if (template.id == 0) {
+            template.id = nextId;
             nextId += 1;
-        } else if (t.id >= nextId) {
+        } else if (template.id >= nextId) {
             revert("invalid id");
         }
-        templates[t.id] = t;
+        templates[template.id] = template;
     }
 }

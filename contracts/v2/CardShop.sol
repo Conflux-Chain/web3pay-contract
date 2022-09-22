@@ -9,19 +9,19 @@ import "./Interfaces.sol";
 //import "hardhat/console.sol";
 
 contract CardShop {
-    ITemplate template;
-    ICard instance;
-    ICardTracker tracker;
-    function setContracts(ITemplate template_, ICard instance_, ICardTracker tracker_) public {
+    ITemplateRegistry public template;
+    ICardFactory public instance;
+    ICardTracker public tracker;
+    function initialize(ITemplateRegistry template_, ICardFactory instance_, ICardTracker tracker_) public {
         template = template_;
         instance = instance_;
         tracker = tracker_;
     }
     function buy(uint templateId) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
-        ITemplate.Template memory t = template.getTemplate(templateId);
+        ITemplateRegistry.Template memory t = template.getTemplate(templateId);
         require(t.id>0);
-        ICard.Card memory p = ICard.Card(
+        ICardFactory.Card memory card = ICardFactory.Card(
             0,//id
             templateId,
             t.name,
@@ -30,6 +30,6 @@ contract CardShop {
             t.duration,
             t.level
         );
-        instance.makeCard(msg.sender, p, tracker);
+        instance.makeCard(msg.sender, card, tracker);
     }
 }

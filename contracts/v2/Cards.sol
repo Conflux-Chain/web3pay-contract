@@ -9,9 +9,9 @@ import "./Interfaces.sol";
 
 import "hardhat/console.sol";
 
-contract Cards is ICard{
+contract Cards is ICardFactory {
     uint nextId = 1;
-    mapping(uint=>Card) packages;
+    mapping(uint=>Card) cards;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -32,15 +32,15 @@ contract Cards is ICard{
         _symbol = symbol_;
     }
 
-    function makeCard(address to, Card memory t, ICardTracker tracker) external override{
-        t.id = nextId;
+    function makeCard(address to, Card memory card, ICardTracker tracker) external override{
+        card.id = nextId;
         nextId += 1;
-        packages[t.id] = t;
+        cards[card.id] = card;
 
         _balances[to] += 1;
-        _owners[t.id] = to;
-        tracker.track(address(0), to, t);
-        emit Transfer(address(0), to, t.id);
+        _owners[card.id] = to;
+        tracker.applyCard(address(0), to, card);
+        emit Transfer(address(0), to, card.id);
     }
 
     function name() public view virtual returns (string memory) {
@@ -60,13 +60,13 @@ contract Cards is ICard{
     }
 
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        ICard.Card memory p = packages[tokenId];
-        string memory tid = Strings.toString(p.templateId);
-        string memory duration = Strings.toString(p.duration);
+        ICardFactory.Card memory card = cards[tokenId];
+        string memory tid = Strings.toString(card.templateId);
+        string memory duration = Strings.toString(card.duration);
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
-                "{\"name\":\"",p.name,
-                 "\",\"image\":\"",p.icon,
-                 "\",\"description\":\"",p.description,
+                "{\"name\":\"", card.name,
+                 "\",\"image\":\"", card.icon,
+                 "\",\"description\":\"", card.description,
                  "\",\"templateId\":\"",tid,
                  "\",\"duration\":\"",duration,
                  "\"}"))));
