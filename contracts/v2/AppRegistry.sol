@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @dev AppRegistry is used to manage all registered applications.
  */
-contract AppRegistry is Ownable {
+contract AppRegistry is Initializable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using Math for uint256;
 
@@ -19,6 +19,14 @@ contract AppRegistry is Ownable {
 
     EnumerableMap.AddressToUintMap private _apps;
     mapping(address => EnumerableMap.AddressToUintMap) private _creators;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public initializer {
+        // TODO add initialization here, e.g. ownerable
+    }
 
     // TODO supports to create App with template
     // TODO privilege to create/remove app

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "./AppCoinV2.sol";
 
 /** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
@@ -35,16 +37,19 @@ interface ISwap {
 /**
  * @dev SwapExchange is used to deposit/withdraw App Coins based on native tokens.
  */
-contract SwapExchange is ReentrancyGuard {
+contract SwapExchange is Initializable, ReentrancyGuard {
+
     AppCoinV2 public appCoin;
     ISwap public swap;
+
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(AppCoinV2 appCoin_, ISwap swap_) public {
-        require(address(appCoin) == address(0), "SwapExchage: already initialized");
-
+    function initialize(AppCoinV2 appCoin_, ISwap swap_) public initializer {
         appCoin = appCoin_;
         swap = swap_;
     }
