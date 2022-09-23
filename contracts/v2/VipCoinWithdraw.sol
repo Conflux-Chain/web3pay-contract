@@ -7,17 +7,21 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
 
-contract VipCoinWithdraw is AppCore, AccessControlEnumerable {
+abstract contract VipCoinWithdraw is AppCore {
 
     event Frozen(address indexed account);
     event Withdraw(address indexed operator, address account, address indexed receiver, uint256 amount);
 
-    uint256 private constant TOKEN_ID_COIN = 0;
-
     bytes32 public constant WITHDRAW_ROLE = keccak256("WITHDRAW_ROLE");
 
-    uint256 public deferTimeSecs = 3600 * 24; // 1 day by default
+    uint256 public deferTimeSecs;
     mapping(address => uint256) public withdrawSchedules;
+
+    function __VipCoinWithdraw_init(uint256 deferTimeSecs_) internal onlyInitializing {
+        _setupRole(WITHDRAW_ROLE, _msgSender());
+
+        deferTimeSecs = deferTimeSecs_;
+    }
 
     /**
      * @dev Withdraw all VIP coins by approved account.

@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCore.sol";
 
-contract VipCoinDeposit is AppCore, AccessControlEnumerable, ReentrancyGuard {
+abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
     event Deposit(address indexed operator, address indexed receiver, uint256 indexed tokenId, uint256 amount);
 
-    uint256 private constant TOKEN_ID_COIN = 0;
-    uint256 private constant TOKEN_ID_AIRDROP = 1;
+    uint256 public constant TOKEN_ID_AIRDROP = 1;
 
     bytes32 public constant AIRDROP_ROLE = keccak256("AIRDROP_ROLE");
+
+    function __VipCoinDeposit_init() internal onlyInitializing {
+        _setupRole(AIRDROP_ROLE, _msgSender());
+    }
 
     /**
      * @dev Returns the amount of VIP coins owned by `account`.
