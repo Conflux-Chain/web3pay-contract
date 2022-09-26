@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+//import "hardhat/console.sol";
 import "./AppCore.sol";
 import "./AppRegistry.sol";
 
@@ -38,7 +38,24 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
      * @dev Deposits `amount` of VIP coins for `receiver`.
      */
     function deposit(uint256 amount, address receiver) public nonReentrant {
+//        console.log("amount: %s , receiver %s", amount, receiver);
         SafeERC20.safeTransferFrom(appCoin, _msgSender(), address(this), amount);
+        vipCoin.mint(receiver, TOKEN_ID_COIN, amount, "");
+        emit Deposit(_msgSender(), receiver, TOKEN_ID_COIN, amount);
+
+        appRegistry.addUser(receiver);
+    }
+
+    /**
+     * @dev Deposits `amount` of asset coins for `receiver`.
+     */
+    function depositAsset(uint256 amount, address receiver) public nonReentrant {
+        // user should approve to this first
+        uint256 assets = appCoin.previewMint(amount);
+        SafeERC20.safeTransferFrom(IERC20(appCoin.asset()), _msgSender(), address(this), assets);
+        SafeERC20.safeApprove(IERC20(appCoin.asset()), address(appCoin), assets);
+        appCoin.deposit(assets, address(this));
+
         vipCoin.mint(receiver, TOKEN_ID_COIN, amount, "");
         emit Deposit(_msgSender(), receiver, TOKEN_ID_COIN, amount);
 

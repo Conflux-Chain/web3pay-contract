@@ -2,12 +2,12 @@ import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
 import {
-	APICoin, App,
+	App,
 	AppCoinV2, AppRegistry,
 	Cards,
 	CardShop,
 	CardTemplate,
-	CardTracker, ERC1967Proxy,
+	CardTracker, ERC1967Proxy, ERC20,
 	IERC20,
 	ISwap, MyERC1967,
 	SwapExchange,
@@ -95,13 +95,14 @@ export async function deployV2App(asset: string, swap:string) {
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
 	await appRegistry.create("app x", "appX", "uri", 0, appOwner).then(waitTx);
-	const [total, createdList] = await appRegistry["list(address,uint256,uint256)"](appOwner, 0, 100)
+	const [total, createdList] = await appRegistry.listByOwner(appOwner, 0, 100)
 	const lastApp = createdList[createdList.length - 1];
 	//
 	const appX = await attach("App", lastApp.addr) as App
 	const vipCoinAddr = await appX.vipCoin()
 	const vipCoin = await attach("VipCoin", vipCoinAddr) as VipCoin;
-	return {v2app, exchange, vipCoin, appX};
+	const assetToken = await attach("ERC20", asset) as ERC20;
+	return {v2app, exchange, vipCoin, appX, assetToken};
 }
 export function timestampLog() {
 	const rawLog = console.log;
