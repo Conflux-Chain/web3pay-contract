@@ -18,8 +18,8 @@ abstract contract AppCore is Initializable, AccessControlEnumerable {
         _disableInitializers();
     }
 
-    function __AppCore_init(IERC20 appCoin_, VipCoin vipCoin_) internal onlyInitializing {
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    function __AppCore_init(IERC20 appCoin_, VipCoin vipCoin_, address owner) internal onlyInitializing {
+        _setupRole(DEFAULT_ADMIN_ROLE, owner);
 
         appCoin = appCoin_;
         vipCoin = vipCoin_;

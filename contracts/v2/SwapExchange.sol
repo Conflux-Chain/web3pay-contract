@@ -146,4 +146,9 @@ contract SwapExchange is Initializable, ReentrancyGuard {
         (bool success,) = to.call{value:value}(new bytes(0));
         require(success, 'SwapExchage: transfer ETH failed');
     }
+
+    /**
+     * @dev Required when deposit ETH and swap contract refund any dust ETH.
+     */
+    receive() external payable {}
 }
