@@ -16,17 +16,15 @@ contract AppFactory is Initializable {
 
     AppCoinV2 public appCoin;
     VipCoinFactory public vipCoinFactory;
-    AppRegistry public appRegistry;
     UpgradeableBeacon public beacon;
 
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(AppCoinV2 appCoin_, VipCoinFactory vipCoinFactory_, AppRegistry appRegistry_, address beaconOwner) public initializer {
+    function initialize(AppCoinV2 appCoin_, VipCoinFactory vipCoinFactory_, address beaconOwner) public initializer {
         appCoin = appCoin_;
         vipCoinFactory = vipCoinFactory_;
-        appRegistry = appRegistry_;
 
         App app = new App();
         beacon = new UpgradeableBeacon(address(app));
@@ -38,7 +36,8 @@ contract AppFactory is Initializable {
         string memory symbol,
         string memory uri,
         uint256 deferTimeSecs,
-        address owner
+        address owner,
+        AppRegistry appRegistry
     ) public returns (address) {
         VipCoin vipCoin = VipCoin(vipCoinFactory.create(name, symbol, uri, owner));
 
