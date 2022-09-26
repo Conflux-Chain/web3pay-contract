@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "hardhat/console.sol";
+
 import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
 
@@ -79,17 +79,14 @@ abstract contract VipCoinWithdraw is AppCore {
     function forceWithdrawEth(address receiver, IWithdrawHook hook, uint256 ethMin) public {
         require(withdrawSchedules[_msgSender()] > 0, "VipCoinWithdraw: force withdraw not requested");
         require(withdrawSchedules[_msgSender()] + deferTimeSecs <= block.timestamp, "VipCoinWithdraw: time locked");
-        console.log("forceWithdrawEth hook: %s , receiver %s", address(hook), receiver);
+
         delete withdrawSchedules[_msgSender()];
 
         uint256 balance = vipCoin.balanceOf(_msgSender(), TOKEN_ID_COIN);
-        console.log("forceWithdrawEth balance: %s", balance);
         vipCoin.burn(_msgSender(), TOKEN_ID_COIN, balance);
-        console.log("forceWithdrawEth 2");
+
         SafeERC20.safeApprove(appCoin, address(hook), balance);
-        console.log("forceWithdrawEth 3");
         hook.withdrawEth(receiver, ethMin);
-        console.log("forceWithdrawEth 4");
 
         emit Withdraw(_msgSender(), _msgSender(), receiver, balance);
     }
