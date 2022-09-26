@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
 
+interface IWithdrawHook {
+    function withdrawEth(address receiver, uint256 ethMin) external;
+}
+
 abstract contract VipCoinWithdraw is AppCore {
 
     event Frozen(address indexed account);
@@ -31,8 +35,8 @@ abstract contract VipCoinWithdraw is AppCore {
      * could help user to withdraw timely.
      * 2. API provider desires to do so.
      */
-    function withdraw(address account) public onlyRole(WITHDRAW_ROLE) {
-        _withdraw(_msgSender(), account, account);
+    function withdraw(address account, bool toAssets) public onlyRole(WITHDRAW_ROLE) {
+        _withdraw(_msgSender(), account, account, toAssets);
     }
 
     /**
@@ -45,21 +49,46 @@ abstract contract VipCoinWithdraw is AppCore {
 
     /**
      * @dev Force withdraw all VIP coins deposited by user self.
+     *
+     * Parameters:
+     * - receiver: to receive the APP coins or assets.
+     * - toAssets: receive assets instead of APP coins.
      */
-    function forceWithdraw(address receiver) public {
+    function forceWithdraw(address receiver, bool toAssets) public {
         require(withdrawSchedules[_msgSender()] > 0, "VipCoinWithdraw: force withdraw not requested");
         require(withdrawSchedules[_msgSender()] + deferTimeSecs <= block.timestamp, "VipCoinWithdraw: time locked");
 
         delete withdrawSchedules[_msgSender()];
 
-        _withdraw(_msgSender(), _msgSender(), receiver);
+        _withdraw(_msgSender(), _msgSender(), receiver, toAssets);
     }
 
-    function _withdraw(address operator, address account, address receiver) private {
+    function _withdraw(address operator, address account, address receiver, bool toAssets) private {
         uint256 balance = vipCoin.balanceOf(account, TOKEN_ID_COIN);
         vipCoin.burn(account, TOKEN_ID_COIN, balance);
-        SafeERC20.safeTransfer(appCoin, receiver, balance);
+
+        if (toAssets) {
+            appCoin.redeem(balance, receiver, address(this));
+        } else {
+            SafeERC20.safeTransfer(appCoin, receiver, balance);
+        }
+
         emit Withdraw(operator, account, receiver, balance);
+    }
+
+    function forceWithdrawEth(address receiver, IWithdrawHook hook, uint256 ethMin) public {
+        require(withdrawSchedules[_msgSender()] > 0, "VipCoinWithdraw: force withdraw not requested");
+        require(withdrawSchedules[_msgSender()] + deferTimeSecs <= block.timestamp, "VipCoinWithdraw: time locked");
+
+        delete withdrawSchedules[_msgSender()];
+
+        uint256 balance = vipCoin.balanceOf(_msgSender(), TOKEN_ID_COIN);
+        vipCoin.burn(_msgSender(), TOKEN_ID_COIN, balance);
+
+        SafeERC20.safeApprove(appCoin, address(hook), balance);
+        hook.withdrawEth(receiver, ethMin);
+
+        emit Withdraw(_msgSender(), _msgSender(), receiver, balance);
     }
 
 }
