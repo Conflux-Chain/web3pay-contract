@@ -11,7 +11,8 @@ contract VipCoinFactory {
         string memory name,
         string memory symbol,
         string memory uri,
-        address owner
+        address owner,
+        address app
     ) public returns (address) {
         VipCoin vc = new VipCoin(name, symbol, uri);
 
@@ -20,6 +21,9 @@ contract VipCoinFactory {
         vc.grantRole(vc.MINTER_ROLE(), owner);
         vc.grantRole(vc.PAUSER_ROLE(), owner);
         vc.grantRole(vc.CONSUMER_ROLE(), owner);
+        // grant roles to app
+        vc.grantRole(vc.MINTER_ROLE(), app);
+        vc.grantRole(vc.CONSUMER_ROLE(), app);
 
         // renounce all roles for this factory
         vc.renounceRole(vc.DEFAULT_ADMIN_ROLE(), address(this));

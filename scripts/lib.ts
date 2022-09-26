@@ -1,7 +1,18 @@
 import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
-import {APICoin, Cards, CardShop, CardTemplate, CardTracker, IERC20, ISwap, TokenRouter} from "../typechain";
+import {
+	APICoin, App,
+	AppCoinV2, AppRegistry,
+	Cards,
+	CardShop,
+	CardTemplate,
+	CardTracker, ERC1967Proxy,
+	IERC20,
+	ISwap, MyERC1967,
+	SwapExchange,
+	TokenRouter, VipCoin, VipCoinFactory
+} from "../typechain";
 import fs from "fs";
 export const tokensNet71 = {
 	usdt: "0x7d682e65efc5c13bf4e394b8f376c48e6bae0355", // net71 faucet usdt,
@@ -10,6 +21,10 @@ export const tokensNet71 = {
 	wcfx: "0x2ed3dddae5b2f321af0806181fbfa6d049be47d8",
 	testApp: "0x04599b35466F23cDf7e28762E5216C6d5B4edDE5",
 	__router: "0x873789aaf553fd0b4252d0d2b72c6331c47aff2e", // swappi router
+}
+export const tokensEthFork = {
+	usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+	__router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
 }
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
@@ -55,6 +70,48 @@ export async function mintERC20(token:string, to:string, amount:string) {
 	await contract['mint'](to, parseEther(amount)).then((tx:ContractTransaction)=>tx.wait())
 	console.log(`mint ${await contract['name']()} ${token} to ${to} x ${amount}`)
 }
+export async function deployWithProxy(implName:string, initArgv: any[]) {
+	const impl = await deploy(implName, []);
+	const initReq = await impl!.populateTransaction['initialize'](...initArgv);
+	const proxy = await deploy("ERC1967Proxy", [impl?.address, initReq!.data])
+	const instance = await attach(implName, proxy!.address);
+	return {impl, proxy, instance}
+}
+export async function deployV2App(asset: string, swap:string) {
+	console.log(`use asset ${asset}`)
+	const v2app = await deploy("AppCoinV2", [asset]) as AppCoinV2;
+	const appOwner = await v2app.signer.getAddress();
+	// proxy exchange
+	const exchangeImpl = await deploy("SwapExchange",[]) as SwapExchange;
+	const initReq = await exchangeImpl.populateTransaction.initialize(v2app.address, swap);
+	// await exchange.initialize(v2app.address, swap);
+	const exProxy = await deploy("ERC1967Proxy", [exchangeImpl.address, initReq.data]) as ERC1967Proxy
+	const exchange = await attach("SwapExchange", exProxy.address) as SwapExchange
+
+	const vipCoinFactory = await deploy("VipCoinFactory", []) as VipCoinFactory;
+	const {proxy:appFactory} = await deployWithProxy("AppFactory",
+		[v2app.address, vipCoinFactory.address, appOwner])
+	const {instance: appRegistryInst} = await deployWithProxy("AppRegistry", [appFactory!.address])
+	console.log(`deploy ok, create app now...`)
+	const appRegistry = appRegistryInst as AppRegistry;
+	await appRegistry.create("app x", "appX", "uri", 1, appOwner).then(waitTx);
+	const [total, createdList] = await appRegistry["list(address,uint256,uint256)"](appOwner, 0, 100)
+	const lastApp = createdList[createdList.length - 1];
+	//
+	const appX = await attach("App", lastApp.addr) as App
+	const vipCoinAddr = await appX.vipCoin()
+	const vipCoin = await attach("VipCoin", vipCoinAddr) as VipCoin;
+	return {v2app, exchange, vipCoin, appX};
+}
+export function timestampLog() {
+	const rawLog = console.log;
+	console.log = function () {
+		process.stdout.write(new Date().toISOString())
+		process.stdout.write(' ')
+		// @ts-ignore
+		rawLog.apply(console, arguments);
+	}
+}
 export async function networkInfo() {
 	const [signer] = await ethers.getSigners()
 	const acc1 = signer.address
@@ -75,7 +132,7 @@ export async function sleep(ms:number) {
 export async function deploy(name:string, args:any[]) {
 	// We get the contract to deploy
 	const Factory = await ethers.getContractFactory(name).catch(err=>{
-		console.log(`error`, err)
+		console.log(`error getContractFactory`, err)
 	});
 	if (!Factory) {
 		return;
