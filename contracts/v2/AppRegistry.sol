@@ -13,6 +13,7 @@ import "./AppFactory.sol";
  */
 contract AppRegistry is Initializable, AccessControlEnumerable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
+    using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
 
     struct AppInfo {
@@ -32,8 +33,9 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
     EnumerableMap.AddressToUintMap private _apps;
     // owner address => map(app address => block.timestamp)
     mapping(address => EnumerableMap.AddressToUintMap) private _owners;
+    // user address => set(app address)
+    mapping(address => EnumerableSet.AddressSet) private _users;
 
-    // TODO supports user level index, e.g. user paid app
     // TODO supports to transfer app owner?
 
     constructor() {
@@ -79,7 +81,15 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
     function remove(address app) public {
         require(_apps.remove(app), "AppRegistry: app not found");
         require(_owners[_msgSender()].remove(app), "AppRegistry: ownership required");
+
+        // Note, do not remove for the `_users` index for gas consideration.
+
         emit Removed(app, _msgSender());
+    }
+
+    function addUser(address user) public returns (bool) {
+        require(_apps.contains(_msgSender()), "AppRegistry: app not registered");
+        return _users[user].add(_msgSender());
     }
 
     function get(address app) public view returns (AppInfo memory) {
@@ -109,8 +119,29 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         return _list(_apps, offset, limit);
     }
 
-    function list(address owner, uint256 offset, uint256 limit) public view returns (uint256, AppInfo[] memory) {
+    function listByOwner(address owner, uint256 offset, uint256 limit) public view returns (uint256, AppInfo[] memory) {
         return _list(_owners[owner], offset, limit);
+    }
+
+    function listByUser(address user, uint256 offset, uint256 limit) public view returns (uint256, AppInfo[] memory) {
+        uint256 total = _users[user].length();
+        if (offset >= total) {
+            return (total, new AppInfo[](0));
+        }
+
+        uint256 end = total.min(offset + limit);
+        AppInfo[] memory result = new AppInfo[](end - offset);
+
+        for (uint256 i = offset; i < end; i++) {
+            address addr = _users[user].at(i);
+            // app may be removed by approved operator
+            (bool ok, uint256 createTime) = _apps.tryGet(addr);
+            if (ok) {
+                result[i - offset] = AppInfo(addr, createTime);
+            }
+        }
+
+        return (total, result);
     }
 
     function _list(EnumerableMap.AddressToUintMap storage apps,uint256 offset, uint256 limit) private view returns (uint256, AppInfo[] memory) {

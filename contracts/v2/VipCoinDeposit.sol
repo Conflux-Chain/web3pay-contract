@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCore.sol";
+import "./AppRegistry.sol";
 
 abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
@@ -14,8 +15,12 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
     bytes32 public constant AIRDROP_ROLE = keccak256("AIRDROP_ROLE");
 
-    function __VipCoinDeposit_init(address owner) internal onlyInitializing {
+    AppRegistry public appRegistry;
+
+    function __VipCoinDeposit_init(address owner, AppRegistry appRegistry_) internal onlyInitializing {
         _setupRole(AIRDROP_ROLE, owner);
+
+        appRegistry = appRegistry_;
     }
 
     /**
@@ -36,6 +41,8 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
         SafeERC20.safeTransferFrom(appCoin, _msgSender(), address(this), amount);
         vipCoin.mint(receiver, TOKEN_ID_COIN, amount, "");
         emit Deposit(_msgSender(), receiver, TOKEN_ID_COIN, amount);
+
+        appRegistry.addUser(receiver);
     }
 
     /**
@@ -44,6 +51,8 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
     function airdrop(address receiver, uint256 amount) public nonReentrant onlyRole(AIRDROP_ROLE) {
         vipCoin.mint(receiver, TOKEN_ID_AIRDROP, amount, "");
         emit Deposit(_msgSender(), receiver, TOKEN_ID_AIRDROP, amount);
+
+        appRegistry.addUser(receiver);
     }
 
     /**
@@ -62,6 +71,8 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
         for (uint256 i = 0; i < receivers.length; i++) {
             vipCoin.mint(receivers[i], TOKEN_ID_AIRDROP, amounts[i], "");
             emit Deposit(_msgSender(), receivers[i], TOKEN_ID_AIRDROP, amounts[i]);
+
+            appRegistry.addUser(receivers[i]);
         }
     }
 
