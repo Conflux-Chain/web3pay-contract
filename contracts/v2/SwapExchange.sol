@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCoinV2.sol";
+import "./App.sol";
 
 /** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
 interface ISwap {
@@ -82,24 +83,11 @@ contract SwapExchange is Initializable, ReentrancyGuard {
     function depositETH(uint256 amount, address receiver) public payable nonReentrant {
         amount = appCoin.previewMint(amount);
 
-        uint256 balanceBefore = address(this).balance - msg.value;
-
-        address[] memory path = new address[](2);
-        path[0] = swap.WETH();
-        path[1] = appCoin.asset();
-
-        // swap ETH for tokens
-        swap.swapETHForExactTokens{value: msg.value}(amount, path, address(this), block.timestamp);
+        _swapEthForTokens(amount);
 
         // approve and deposit for receiver
         SafeERC20.safeApprove(IERC20(appCoin.asset()), address(appCoin), amount);
         appCoin.deposit(amount, receiver);
-
-        // refund dust ETH if any
-        uint256 dust = address(this).balance - balanceBefore;
-        if (dust > 0) {
-            _safeTransferETH(msg.sender, dust);
-        }
     }
 
     /**
@@ -129,10 +117,60 @@ contract SwapExchange is Initializable, ReentrancyGuard {
      */
     function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public nonReentrant {
         // requires user to approve AppCoin to this SwapExchange
-        SafeERC20.safeTransferFrom(appCoin, msg.sender, address(this), amount);
+        amount = appCoin.redeem(amount, address(this), msg.sender);
 
-        amount = appCoin.redeem(amount, address(this), address(this));
+        _swapTokensForEth(amount, ethMin, receiver);
+    }
 
+    function _safeTransferETH(address to, uint value) private {
+        (bool success,) = to.call{value:value}(new bytes(0));
+        require(success, 'SwapExchage: transfer ETH failed');
+    }
+
+    /**
+     * @dev Deposit `amount` of to VIP coins to `receiver` with ETH.
+     *
+     * Parameters:
+     * - amount: amount of VIP Coins to deposit.
+     * - receiver: address to receive the VIP Coins.
+     */
+    function depositAppETH(App app, uint256 amount, address receiver) public payable nonReentrant {
+        uint256 assets = appCoin.previewMint(amount);
+
+        _swapEthForTokens(assets);
+
+        // approve and deposit API coin
+        SafeERC20.safeApprove(IERC20(appCoin.asset()), address(appCoin), assets);
+        appCoin.deposit(assets, address(this));
+
+        // approve and deposit VIP coin for receiver
+        SafeERC20.safeApprove(appCoin, address(app), amount);
+        app.deposit(amount, receiver);
+    }
+
+    /**
+     * @dev Required when deposit ETH and swap contract refund any dust ETH.
+     */
+    receive() external payable {}
+
+    function _swapEthForTokens(uint256 amount) private {
+        uint256 balanceBefore = address(this).balance - msg.value;
+
+        address[] memory path = new address[](2);
+        path[0] = swap.WETH();
+        path[1] = appCoin.asset();
+
+        // swap ETH for tokens
+        swap.swapETHForExactTokens{value: msg.value}(amount, path, address(this), block.timestamp);
+
+        // refund dust ETH if any
+        uint256 dust = address(this).balance - balanceBefore;
+        if (dust > 0) {
+            _safeTransferETH(msg.sender, dust);
+        }
+    }
+
+    function _swapTokensForEth(uint256 amount, uint256 ethMin, address receiver) private {
         address[] memory path = new address[](2);
         path[0] = appCoin.asset();
         path[1] = swap.WETH();
@@ -142,13 +180,4 @@ contract SwapExchange is Initializable, ReentrancyGuard {
         swap.swapExactTokensForETH(amount, ethMin, path, receiver, block.timestamp);
     }
 
-    function _safeTransferETH(address to, uint value) private {
-        (bool success,) = to.call{value:value}(new bytes(0));
-        require(success, 'SwapExchage: transfer ETH failed');
-    }
-
-    /**
-     * @dev Required when deposit ETH and swap contract refund any dust ETH.
-     */
-    receive() external payable {}
 }
