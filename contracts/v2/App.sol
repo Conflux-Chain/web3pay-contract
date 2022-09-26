@@ -20,8 +20,6 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
     }
 
-    // TODO allow user to use force withdraw and get ETH based on swap.
-
     // TODO integrate API weight contract to consume VIP coins.
 
     // TODO integrate VIP card in advance.

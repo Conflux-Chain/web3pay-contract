@@ -154,7 +154,7 @@ contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
      *
      * This is to allow users to force withdraw ETH.
      */
-    function withdrawEth(address receiver, uint256 ethMin) public {
+    function withdrawEth(address receiver, uint256 ethMin) public override {
         uint256 amount = appCoin.allowance(msg.sender, address(this));
         amount = appCoin.redeem(amount, address(this), msg.sender);
         _swapTokensForEth(amount, ethMin, receiver);
