@@ -17,8 +17,8 @@ abstract contract VipCoinWithdraw is AppCore {
     uint256 public deferTimeSecs;
     mapping(address => uint256) public withdrawSchedules;
 
-    function __VipCoinWithdraw_init(uint256 deferTimeSecs_) internal onlyInitializing {
-        _setupRole(WITHDRAW_ROLE, _msgSender());
+    function __VipCoinWithdraw_init(uint256 deferTimeSecs_, address owner) internal onlyInitializing {
+        _setupRole(WITHDRAW_ROLE, owner);
 
         deferTimeSecs = deferTimeSecs_;
     }

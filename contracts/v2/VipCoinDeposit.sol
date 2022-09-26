@@ -14,8 +14,8 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
     bytes32 public constant AIRDROP_ROLE = keccak256("AIRDROP_ROLE");
 
-    function __VipCoinDeposit_init() internal onlyInitializing {
-        _setupRole(AIRDROP_ROLE, _msgSender());
+    function __VipCoinDeposit_init(address owner) internal onlyInitializing {
+        _setupRole(AIRDROP_ROLE, owner);
     }
 
     /**
