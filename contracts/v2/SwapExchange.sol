@@ -125,7 +125,7 @@ contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
 
     function _safeTransferETH(address to, uint value) private {
         (bool success,) = to.call{value:value}(new bytes(0));
-        require(success, 'SwapExchage: transfer ETH failed');
+        require(success, 'SwapExchange: transfer ETH failed');
     }
 
     /**

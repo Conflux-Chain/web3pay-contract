@@ -39,14 +39,11 @@ contract AppFactory is Initializable {
         address owner,
         AppRegistry appRegistry
     ) public returns (address) {
-        VipCoin vipCoin = VipCoin(vipCoinFactory.create(name, symbol, uri, owner));
-
         App app = App(address(new BeaconProxy(address(beacon), "")));
-        app.initialize(appCoin, vipCoin, deferTimeSecs, owner, appRegistry);
 
-        // grant roles of vip coin to app
-        vipCoin.grantRole(vipCoin.MINTER_ROLE(), address(app));
-        vipCoin.grantRole(vipCoin.CONSUMER_ROLE(), address(app));
+        VipCoin vipCoin = VipCoin(vipCoinFactory.create(name, symbol, uri, owner, address(app)));
+
+        app.initialize(appCoin, vipCoin, deferTimeSecs, owner, appRegistry);
 
         emit Created(address(app), msg.sender, owner);
 

@@ -12,6 +12,7 @@
     "start-hardhat-node": "hardhat node",
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
     "test-card-deploy": "hardhat --network test run scripts/deploy-card.ts",
+    "test-deploy-v2": "hardhat --network fork run scripts/deploy-v2.ts",
     "test-accounts": "hardhat --network test accounts",
     "doc": "solidity-docgen --solc-module solc-0-8",
     "test-local": "hardhat test ./test/apiCoin.ts",
