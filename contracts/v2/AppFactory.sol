@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "./AppCoinV2.sol";
 import "./VipCoinFactory.sol";
 import "./App.sol";
+import "./AppRegistry.sol";
 
 contract AppFactory is Initializable {
 
@@ -15,15 +16,17 @@ contract AppFactory is Initializable {
 
     AppCoinV2 public appCoin;
     VipCoinFactory public vipCoinFactory;
+    AppRegistry public appRegistry;
     UpgradeableBeacon public beacon;
 
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(AppCoinV2 appCoin_, VipCoinFactory vipCoinFactory_, address beaconOwner) public initializer {
+    function initialize(AppCoinV2 appCoin_, VipCoinFactory vipCoinFactory_, AppRegistry appRegistry_, address beaconOwner) public initializer {
         appCoin = appCoin_;
         vipCoinFactory = vipCoinFactory_;
+        appRegistry = appRegistry_;
 
         App app = new App();
         beacon = new UpgradeableBeacon(address(app));
@@ -40,7 +43,7 @@ contract AppFactory is Initializable {
         VipCoin vipCoin = VipCoin(vipCoinFactory.create(name, symbol, uri, owner));
 
         App app = App(address(new BeaconProxy(address(beacon), "")));
-        app.initialize(appCoin, vipCoin, deferTimeSecs, owner);
+        app.initialize(appCoin, vipCoin, deferTimeSecs, owner, appRegistry);
 
         // grant roles of vip coin to app
         vipCoin.grantRole(vipCoin.MINTER_ROLE(), address(app));

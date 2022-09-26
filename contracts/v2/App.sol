@@ -14,9 +14,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(AppCoinV2 appCoin_, VipCoin vipCoin_, uint256 deferTimeSecs_, address owner) public initializer {
+    function initialize(AppCoinV2 appCoin_, VipCoin vipCoin_, uint256 deferTimeSecs_, address owner, AppRegistry appRegitry_) public initializer {
         __AppCore_init(appCoin_, vipCoin_, owner);
-        __VipCoinDeposit_init(owner);
+        __VipCoinDeposit_init(owner, appRegitry_);
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
     }
 
