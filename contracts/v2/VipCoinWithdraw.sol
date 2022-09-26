@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
 
+interface IWithdrawHook {
+    function withdrawEth(address receiver, uint256 ethMin) external;
+}
+
 abstract contract VipCoinWithdraw is AppCore {
 
     event Frozen(address indexed account);
@@ -70,6 +74,21 @@ abstract contract VipCoinWithdraw is AppCore {
         }
 
         emit Withdraw(operator, account, receiver, balance);
+    }
+
+    function forceWithdrawEth(address receiver, IWithdrawHook hook, uint256 ethMin) public {
+        require(withdrawSchedules[_msgSender()] > 0, "VipCoinWithdraw: force withdraw not requested");
+        require(withdrawSchedules[_msgSender()] + deferTimeSecs <= block.timestamp, "VipCoinWithdraw: time locked");
+
+        delete withdrawSchedules[_msgSender()];
+
+        uint256 balance = vipCoin.balanceOf(_msgSender(), TOKEN_ID_COIN);
+        vipCoin.burn(_msgSender(), TOKEN_ID_COIN, balance);
+
+        SafeERC20.safeApprove(appCoin, address(hook), balance);
+        hook.withdrawEth(receiver, ethMin);
+
+        emit Withdraw(_msgSender(), _msgSender(), receiver, balance);
     }
 
 }

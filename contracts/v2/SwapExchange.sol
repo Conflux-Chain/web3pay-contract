@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCoinV2.sol";
 import "./App.sol";
+import "./VipCoinWithdraw.sol";
 
 /** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
 interface ISwap {
@@ -38,7 +39,7 @@ interface ISwap {
 /**
  * @dev SwapExchange is used to deposit/withdraw App Coins based on native tokens.
  */
-contract SwapExchange is Initializable, ReentrancyGuard {
+contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
 
     AppCoinV2 public appCoin;
     ISwap public swap;
@@ -146,6 +147,17 @@ contract SwapExchange is Initializable, ReentrancyGuard {
         // approve and deposit VIP coin for receiver
         SafeERC20.safeApprove(appCoin, address(app), amount);
         app.deposit(amount, receiver);
+    }
+
+    /**
+     * @dev Implements the IWithdrawHook interface.
+     *
+     * This is to allow users to force withdraw ETH.
+     */
+    function withdrawEth(address receiver, uint256 ethMin) public {
+        uint256 amount = appCoin.allowance(msg.sender, address(this));
+        amount = appCoin.redeem(amount, address(this), msg.sender);
+        _swapTokensForEth(amount, ethMin, receiver);
     }
 
     /**
