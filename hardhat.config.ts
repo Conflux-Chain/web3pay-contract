@@ -47,6 +47,7 @@ const config: HardhatUserConfig = {
           process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     fork: {
+      // starts by: hardhat node --fork <your rpc provider>
       url: "http://127.0.0.1:8545/"
     },
   },

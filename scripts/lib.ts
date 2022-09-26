@@ -94,7 +94,7 @@ export async function deployV2App(asset: string, swap:string) {
 	const {instance: appRegistryInst} = await deployWithProxy("AppRegistry", [appFactory!.address])
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
-	await appRegistry.create("app x", "appX", "uri", 1, appOwner).then(waitTx);
+	await appRegistry.create("app x", "appX", "uri", 0, appOwner).then(waitTx);
 	const [total, createdList] = await appRegistry["list(address,uint256,uint256)"](appOwner, 0, 100)
 	const lastApp = createdList[createdList.length - 1];
 	//
