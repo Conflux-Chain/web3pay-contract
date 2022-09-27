@@ -5,22 +5,23 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import "./AppCoinV2.sol";
-import "./VipCoin.sol";
 import "./ApiWeightToken.sol";
 
-abstract contract AppCore is Initializable, AccessControlEnumerable {
+abstract contract AppCore is Initializable, AccessControlEnumerable, IApp {
 
     uint256 public constant TOKEN_ID_COIN = 0;
 
-    AppCoinV2 public appCoin;
-    VipCoin public vipCoin;
+    AppCoinV2 internal appCoin;
+    IVipCoin public vipCoin;
     ApiWeightToken public apiWeightToken;
 
     constructor() {
         _disableInitializers();
     }
-
-    function __AppCore_init(AppCoinV2 appCoin_, VipCoin vipCoin_, ApiWeightToken apiWeightToken_, address owner) internal onlyInitializing {
+    function getAppCoin() public view override returns(address) {
+        return address(appCoin);
+    }
+    function __AppCore_init(AppCoinV2 appCoin_, IVipCoin vipCoin_, ApiWeightToken apiWeightToken_, address owner) internal onlyInitializing {
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
 
         appCoin = appCoin_;

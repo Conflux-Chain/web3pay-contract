@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "./ApiWeightToken.sol";
-import "./App.sol";
 
 contract ApiWeightTokenFactory is Initializable{
     event Created(address indexed app, address indexed operator, address indexed owner);
@@ -22,7 +21,7 @@ contract ApiWeightTokenFactory is Initializable{
     }
 
     function create(
-        App belongsTo,
+        IApp belongsTo,
         string memory name,
         string memory symbol,
         string memory uri,

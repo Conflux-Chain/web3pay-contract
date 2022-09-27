@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 //import "hardhat/console.sol";
 import "./AppCore.sol";
-import "./AppRegistry.sol";
 
 abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
@@ -15,9 +14,9 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
 
     bytes32 public constant AIRDROP_ROLE = keccak256("AIRDROP_ROLE");
 
-    AppRegistry public appRegistry;
+    IAppRegistry public appRegistry;
 
-    function __VipCoinDeposit_init(address owner, AppRegistry appRegistry_) internal onlyInitializing {
+    function __VipCoinDeposit_init(address owner, IAppRegistry appRegistry_) internal onlyInitializing {
         _setupRole(AIRDROP_ROLE, owner);
 
         appRegistry = appRegistry_;

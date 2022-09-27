@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "../AppConfig.sol";
 import "./TokenNameSymbol.sol";
-import "./App.sol";
+import "./interfaces.sol";
 
 /**
  * Config api weights and display as 1155 NFT.
@@ -15,10 +16,10 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
     // role to configure resource weight
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
-    App public belongsToApp;
+    IApp public belongsToApp;
 
     constructor(
-        App belongsTo,
+        IApp belongsTo,
         string memory name,
         string memory symbol,
         string memory uri
@@ -29,7 +30,7 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
     }
 
     function initialize(
-        App belongsTo,
+        IApp belongsTo,
         string memory name,
         string memory symbol,
         string memory uri,
@@ -56,7 +57,8 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
      * It is required that the asset token is an address on testnet.
      */
     function setPendingSeconds(uint seconds_) public {
-        require(belongsToApp.appCoin().asset() == 0x7d682e65EFC5C13Bf4E394B8f376C48e6baE0355, "only for testnet");
+        // hardcoded address is the faucet usdt on testnet.
+        require(IERC4626(belongsToApp.getAppCoin()).asset() == 0x7d682e65EFC5C13Bf4E394B8f376C48e6baE0355, "only for testnet");
         pendingSeconds = seconds_;
     }
 
