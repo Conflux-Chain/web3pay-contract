@@ -38,6 +38,10 @@ contract Cards is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata 
         tracker.applyCard(address(0), to, card);
     }
 
+    function getCard(uint id) public view returns (Card memory){
+        return cards[id];
+    }
+
     function uri(uint256 tokenId) public view override (ERC1155, IERC1155MetadataURI) returns (string memory) {
         Card memory card = cards[tokenId];
         string memory tid = Strings.toString(card.templateId);

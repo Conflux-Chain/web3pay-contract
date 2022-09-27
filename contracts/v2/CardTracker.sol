@@ -31,4 +31,8 @@ contract CardTracker {
         }
         emit VipChanged(to, info.expireAt, info.level);
     }
+
+    function getVipInfo(address account) public view returns (VipInfo memory) {
+        return _vipMap[account];
+    }
 }

@@ -72,6 +72,15 @@ export function waitTx(tx:any) {
 export async function sleep(ms:number) {
 	return new Promise(r=>setTimeout(r, ms))
 }
+export function timestampLog() {
+	const rawLog = console.log;
+	console.log = function () {
+		process.stdout.write(new Date().toISOString())
+		process.stdout.write(' ')
+		// @ts-ignore
+		rawLog.apply(console, arguments);
+	}
+}
 export async function deploy(name:string, args:any[]) {
 	// We get the contract to deploy
 	const Factory = await ethers.getContractFactory(name).catch(err=>{
