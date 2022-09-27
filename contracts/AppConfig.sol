@@ -25,7 +25,7 @@ abstract contract AppConfig {
     uint256 public constant BILLING_ID = 3; // privilege
     uint256 public constant TOKEN_AIRDROP_ID = 4; // token
     /** reserve gap */
-    uint32 public constant FIRST_CONFIG_ID = 101;
+    uint32 public constant FIRST_CONFIG_ID = 1001;
     /** auto-increment id, starts from `FIRST_CONFIG_ID` */
     uint32 public nextConfigId;
     /** store, key is auto-generated id */
