@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
-import "./Cards.sol";
+
+import "./interfaces.sol";
 
 //TODO access control
 /** Track card mint, calculate vip info. */
-contract CardTracker {
+contract CardTracker is ICardTracker{
     event VipChanged(address indexed account, uint expireAt, uint16 level);
     //Contract that could call to this one.
     address _eventSource;
@@ -18,7 +19,7 @@ contract CardTracker {
     }
 
     //TODO add level logic.
-    function applyCard(address from, address to, Cards.Card memory card) external {
+    function applyCard(address from, address to, ICards.Card memory card) external override {
         require(msg.sender == _eventSource, "unauthorised");
         require(from == address(0), "not supported");
         // expand expire time

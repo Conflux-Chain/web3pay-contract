@@ -7,8 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCoinV2.sol";
-import "./App.sol";
-import "./VipCoinWithdraw.sol";
+import "./interfaces.sol";
 
 /** The interface of swapping contract (SwappiRouter on Conflux eSpace). */
 interface ISwap {
@@ -135,7 +134,7 @@ contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
      * - amount: amount of VIP Coins to deposit.
      * - receiver: address to receive the VIP Coins.
      */
-    function depositAppETH(App app, uint256 amount, address receiver) public payable nonReentrant {
+    function depositAppETH(IVipCoinDeposit app, uint256 amount, address receiver) public payable nonReentrant {
         uint256 assets = appCoin.previewMint(amount);
 
         _swapEthForTokens(assets);

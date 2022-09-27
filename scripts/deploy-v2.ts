@@ -32,7 +32,7 @@ async function deploy(acc1: string) {
     console.log(`withdraw transactionHash ${transactionHash}`)
     // deposit to appX through app coin
     await v2app.approve(appX.address, acAmount).then(waitTx)
-    console.log(`allowance appx`, await v2app.allowance(acc1, appX.address), "app coin", await appX.appCoin())
+    console.log(`allowance appx`, await v2app.allowance(acc1, appX.address), "app coin", await appX.getAppCoin())
     await appX.deposit(acAmount, acc1).then(waitTx)
     console.log(`app x balance ${await appX.balanceOf(acc1)}`)
     // deposit to app directly

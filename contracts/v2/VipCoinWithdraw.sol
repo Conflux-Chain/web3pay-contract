@@ -5,11 +5,7 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./AppCore.sol";
-import "./VipCoinDeposit.sol";
-
-interface IWithdrawHook {
-    function withdrawEth(address receiver, uint256 ethMin) external;
-}
+import "./interfaces.sol";
 
 abstract contract VipCoinWithdraw is AppCore {
 

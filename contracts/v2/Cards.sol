@@ -8,19 +8,10 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "hardhat/console.sol";
-import "./CardTracker.sol";
+import "./interfaces.sol";
 
 //TODO access control
-contract Cards is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata {
-    struct Card {
-        uint id;
-        uint templateId;
-        string name;
-        string description;
-        string icon;
-        uint duration;
-        uint8 level;
-    }
+contract Cards is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata, ICards {
     //TODO add query functions
     //save card information.
     mapping(uint=>Card) cards;
@@ -32,7 +23,7 @@ contract Cards is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata 
     ) ERC1155PresetMinterPauser(uri_) CRC1155Metadata(name, symbol)  {
     }
 
-    function makeCard(address to, Card memory card, uint amount, CardTracker tracker) external {
+    function makeCard(address to, Card memory card, uint amount, ICardTracker tracker) external override {
         _mint(to, card.id, amount, "");
         cards[card.id] = card;
         tracker.applyCard(address(0), to, card);

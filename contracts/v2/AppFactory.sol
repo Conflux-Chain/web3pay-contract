@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "./AppCoinV2.sol";
 import "./VipCoinFactory.sol";
 import "./App.sol";
-import "./AppRegistry.sol";
 import "./ApiWeightTokenFactory.sol";
 
 contract AppFactory is Initializable {
@@ -47,11 +46,11 @@ contract AppFactory is Initializable {
         uint256 deferTimeSecs,
         uint defaultApiWeight,
         address owner,
-        AppRegistry appRegistry
+        IAppRegistry appRegistry
     ) public returns (address) {
         App app = App(address(new BeaconProxy(address(beacon), "")));
 
-        VipCoin vipCoin = VipCoin(vipCoinFactory.create(name, symbol, uri, owner, address(app)));
+        IVipCoin vipCoin = IVipCoin(vipCoinFactory.create(name, symbol, uri, owner, address(app)));
         ApiWeightToken apiWeightToken = ApiWeightToken(apiWeightTokenFactory.create(
             app,
             string(abi.encodePacked(name, " api")),
