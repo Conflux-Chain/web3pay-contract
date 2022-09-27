@@ -56,7 +56,7 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
      * It is required that the asset token is an address on testnet.
      */
     function setPendingSeconds(uint seconds_) public {
-        require(belongsToApp.appCoin().asset() == 0x7d682e65EFC5C13Bf4E394B8f376C48e6baE0355, "403");
+        require(belongsToApp.appCoin().asset() == 0x7d682e65EFC5C13Bf4E394B8f376C48e6baE0355, "only for testnet");
         pendingSeconds = seconds_;
     }
 
