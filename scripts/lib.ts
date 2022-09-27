@@ -2,6 +2,7 @@ import {ethers} from "hardhat";
 import {ContractTransaction} from "ethers";
 import {formatEther, parseEther} from "ethers/lib/utils";
 import {
+	ApiWeightToken, ApiWeightTokenFactory,
 	App,
 	AppCoinV2, AppRegistry,
 	Cards,
@@ -88,13 +89,18 @@ export async function deployV2App(asset: string, swap:string) {
 	const exProxy = await deploy("ERC1967Proxy", [exchangeImpl.address, initReq.data]) as ERC1967Proxy
 	const exchange = await attach("SwapExchange", exProxy.address) as SwapExchange
 
+
+	const apiWeightTokenImpl = await deploy("ApiWeightToken", [ethers.constants.AddressZero, "", "", ""]) as ApiWeightToken;
+	const {instance: apiWeightFactory} = await deployWithProxy("ApiWeightTokenFactory", [apiWeightTokenImpl.address, appOwner]);
+
 	const vipCoinFactory = await deploy("VipCoinFactory", []) as VipCoinFactory;
 	const {proxy:appFactory} = await deployWithProxy("AppFactory",
-		[v2app.address, vipCoinFactory.address, appOwner])
+		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, appOwner])
+
 	const {instance: appRegistryInst} = await deployWithProxy("AppRegistry", [appFactory!.address])
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
-	await appRegistry.create("app x", "appX", "uri", 0, appOwner).then(waitTx);
+	await appRegistry.create("app x", "appX", "uri", 0, 1, appOwner).then(waitTx);
 	const [total, createdList] = await appRegistry.listByOwner(appOwner, 0, 100)
 	const lastApp = createdList[createdList.length - 1];
 	//

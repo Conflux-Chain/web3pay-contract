@@ -61,11 +61,12 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         string memory symbol,
         string memory uri,
         uint256 deferTimeSecs,
+        uint256 defaultApiWeight,
         address owner
     ) public returns (address) {
         require(creatorRoleDisabled || hasRole(CREATOR_ROLE, _msgSender()), "AppRegistry: CREATOR_ROLE required");
 
-        address app = appFactory.create(name, symbol, uri, deferTimeSecs, owner, this);
+        address app = appFactory.create(name, symbol, uri, deferTimeSecs, defaultApiWeight, owner, this);
 
         _apps.set(app, block.timestamp);
         _owners[_msgSender()].set(app, block.timestamp);
