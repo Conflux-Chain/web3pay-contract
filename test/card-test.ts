@@ -21,7 +21,7 @@ describe("Greeter", function () {
     console.log(`next id`, nextId)
     console.log(`config`, await template.getTemplate(nextId.sub(1)))
     await shop.buy(nextId.sub(1))
-    console.log(`meta`, await inst.tokenURI(1)
+    console.log(`meta`, await inst.uri(1)
         .then(
             res=>{
               console.log(`meta raw`, res)
