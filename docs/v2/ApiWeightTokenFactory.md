@@ -11,7 +11,7 @@
 
 
 
-### `create(contract App belongsTo, string name, string symbol, string uri, address owner, uint256 defaultWeight) → address` (public)
+### `create(contract IApp belongsTo, string name, string symbol, string uri, address owner, uint256 defaultWeight) → address` (public)
 
 
 

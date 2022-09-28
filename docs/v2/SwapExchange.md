@@ -49,7 +49,7 @@ Parameters:
 - amount: amount of App Coins to withdraw.
 - receiver: address to receive the ETH.
 
-### `depositAppETH(contract App app, uint256 amount, address receiver)` (public)
+### `depositAppETH(contract IVipCoinDeposit app, uint256 amount, address receiver)` (public)
 
 
 

@@ -11,7 +11,7 @@
 
 
 
-### `create(string name, string symbol, string uri, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner, contract AppRegistry appRegistry) → address` (public)
+### `create(string name, string symbol, string uri, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner, contract IAppRegistry appRegistry) → address` (public)
 
 
 

@@ -35,7 +35,7 @@ There is a delayed execution mechanism when configuring resources.
 
 
 
-### `setPendingProp(uint32 id, enum AppConfig.OP op_, uint256 weight_)` (internal)
+### `setPendingProp(uint32 id, enum IAppConfig.OP op_, uint256 weight_)` (internal)
 
 
 
@@ -59,7 +59,7 @@ Make the configuration that satisfies the delay mechanism take effect.
 
 
 
-### `listResources(uint256 offset, uint256 limit) → struct AppConfig.ConfigEntry[], uint256 total` (public)
+### `listResources(uint256 offset, uint256 limit) → struct IAppConfig.ConfigEntry[], uint256 total` (public)
 
 
 
@@ -78,41 +78,17 @@ Make the configuration that satisfies the delay mechanism take effect.
 
 
 
-### `ResourceChanged(uint32 id, uint256 weight, enum AppConfig.OP op)`
+### `ResourceChanged(uint32 id, uint256 weight, enum IAppConfig.OP op)`
 
 
 
 
 
-### `ResourcePending(uint32 id, uint256 newWeight, enum AppConfig.OP op)`
+### `ResourcePending(uint32 id, uint256 newWeight, enum IAppConfig.OP op)`
 
 
 
 
-
-
-### `ConfigEntry`
-
-
-string resourceId
-
-
-uint256 weight
-
-
-uint32 index
-
-
-enum AppConfig.OP pendingOP
-
-
-uint256 pendingWeight
-
-
-uint256 submitSeconds
-
-
-uint256 requestTimes
 
 
 ### `ConfigRequest`
@@ -127,25 +103,7 @@ string resourceId
 uint256 weight
 
 
-enum AppConfig.OP op
-
-
-
-### `OP`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+enum IAppConfig.OP op
 
 
 

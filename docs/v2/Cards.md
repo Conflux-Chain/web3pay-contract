@@ -11,7 +11,7 @@
 
 
 
-### `makeCard(address to, struct Cards.Card card, uint256 amount, contract CardTracker tracker)` (external)
+### `makeCard(address to, struct ICards.Card card, uint256 amount, contract ICardTracker tracker)` (external)
 
 
 
@@ -35,30 +35,6 @@
 
 
 
-
-
-### `Card`
-
-
-uint256 id
-
-
-uint256 templateId
-
-
-string name
-
-
-string description
-
-
-string icon
-
-
-uint256 duration
-
-
-uint8 level
 
 
 

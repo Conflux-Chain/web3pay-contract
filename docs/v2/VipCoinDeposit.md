@@ -5,7 +5,7 @@
 
 
 
-### `__VipCoinDeposit_init(address owner, contract AppRegistry appRegistry_)` (internal)
+### `__VipCoinDeposit_init(address owner, contract IAppRegistry appRegistry_)` (internal)
 
 
 

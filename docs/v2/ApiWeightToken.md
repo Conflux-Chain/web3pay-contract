@@ -5,13 +5,19 @@ Config api weights and display as 1155 NFT.
 
 
 
-### `constructor(contract App belongsTo, string name, string symbol, string uri)` (public)
+### `constructor(contract IApp belongsTo, string name, string symbol, string uri)` (public)
 
 
 
 
 
-### `initialize(contract App belongsTo, string name, string symbol, string uri, address owner, uint256 defaultWeight)` (public)
+### `initialize(contract IApp belongsTo, string name, string symbol, string uri, address owner, uint256 defaultWeight)` (public)
+
+
+
+
+
+### `addRequestTimes(address account, struct IAppConfig.ResourceUseDetail[] useDetail)` (external)
 
 
 
