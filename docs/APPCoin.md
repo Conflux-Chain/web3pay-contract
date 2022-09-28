@@ -28,6 +28,12 @@ For api consumer:
 
 
 
+### `_addNewUser(address addr)` (internal)
+
+
+
+
+
 ### `_beforeTokenTransfer(address operator, address from, address to, uint256[] ids, uint256[] amounts, bytes data)` (internal)
 
 
@@ -46,23 +52,37 @@ Freeze/Unfreeze an account.
 
 
 
+### `configPrivilege(address account, bool add, uint256 id)` (external)
+
+
+
+
+
 ### `takeProfit(address to, uint256 amount)` (public)
 
 
 
 
 
-### `chargeBatch(struct APPCoin.ChargeRequest[] requestArray)` (public)
+### `chargeBatch(struct IAppConfig.ChargeRequest[] requestArray)` (public)
 
 
 
 
 
-### `charge(address account, uint256 amount, bytes, struct APPCoin.ResourceUseDetail[] useDetail)` (public)
+### `charge(address account, uint256 amount, bytes, struct IAppConfig.ResourceUseDetail[] useDetail)` (public)
+
+Charge account's quota.
+Will emit `Spend` event if airdrops are consumed.
+Will always emit ERC20 `Transfer` event (even real quota consumed is zero).
 
 
 
-Charge fee
+### `_charge(address account, uint256 amount, bytes, struct IAppConfig.ResourceUseDetail[] useDetail)` (internal)
+
+
+
+
 
 ### `withdrawRequest()` (public)
 
@@ -83,6 +103,12 @@ After the delay time expires, the user can withdraw the remaining funds.
 
 
 ### `_withdraw(address account, bytes reason)` (internal)
+
+
+
+
+
+### `_swapApiCoin(uint256 amount, address to)` (internal)
 
 
 
@@ -198,6 +224,18 @@ It is required that the name of this contract is DO_NOT_DEPOSIT and the symbol i
 
 
 
+### `Spend(address from, uint256 amount)`
+
+
+
+
+
+### `Drop(address to, uint256 amount, string reason)`
+
+
+
+
+
 ### `Frozen(address addr)`
 
 
@@ -218,30 +256,6 @@ address user
 
 
 uint256 amount
-
-
-### `ResourceUseDetail`
-
-
-uint32 id
-
-
-uint256 times
-
-
-### `ChargeRequest`
-
-
-address account
-
-
-uint256 amount
-
-
-bytes data
-
-
-struct APPCoin.ResourceUseDetail[] useDetail
 
 
 

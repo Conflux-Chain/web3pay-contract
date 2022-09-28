@@ -11,7 +11,7 @@ Track card mint, calculate vip info.
 
 
 
-### `applyCard(address from, address to, struct Cards.Card card)` (external)
+### `applyCard(address from, address to, struct ICards.Card card)` (external)
 
 
 

@@ -11,6 +11,12 @@ The interface of swapping contract (SwappiRouter on Conflux eSpace).
 
 
 
+### `swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) → uint256[] amounts` (external)
+
+
+
+
+
 ### `swapTokensForExactTokens(uint256 amountOut, uint256 amountInMax, address[] path, address to, uint256 deadline) → uint256[] amounts` (external)
 
 

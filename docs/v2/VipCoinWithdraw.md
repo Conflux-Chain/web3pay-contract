@@ -38,6 +38,12 @@ Parameters:
 - receiver: to receive the APP coins or assets.
 - toAssets: receive assets instead of APP coins.
 
+### `_withdraw(address operator, address account, address receiver, bool toAssets)` (internal)
+
+
+
+
+
 ### `forceWithdrawEth(address receiver, contract IWithdrawHook hook, uint256 ethMin)` (public)
 
 

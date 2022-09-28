@@ -5,7 +5,7 @@
 
 
 
-### `initialize(contract CardTemplate template_, contract Cards instance_, contract CardTracker tracker_)` (public)
+### `initialize(contract ICardTemplate template_, contract ICards instance_, contract ICardTracker tracker_)` (public)
 
 
 
