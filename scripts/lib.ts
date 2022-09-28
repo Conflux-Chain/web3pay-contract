@@ -143,7 +143,8 @@ export async function networkInfo() {
 
 	let network = await ethers.provider.getNetwork();
 	console.log(`${acc1} balance `, await signer.getBalance().then(formatEther), `network`, network)
-	return {signer, account: acc1}
+	const {chainId} = network;
+	return {signer, account: acc1, chainId}
 }
 export function getDeadline(diff: number = 1000) {
 	return Math.round(Date.now()/1000 ) + diff

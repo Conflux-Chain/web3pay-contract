@@ -59,7 +59,7 @@ abstract contract VipCoinWithdraw is AppCore {
         _withdraw(_msgSender(), _msgSender(), receiver, toAssets);
     }
 
-    function _withdraw(address operator, address account, address receiver, bool toAssets) private {
+    function _withdraw(address operator, address account, address receiver, bool toAssets) internal {
         uint256 balance = vipCoin.balanceOf(account, TOKEN_ID_COIN);
         vipCoin.burn(account, TOKEN_ID_COIN, balance);
 

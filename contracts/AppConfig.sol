@@ -1,23 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "./v2/interfaces.sol";
+
 /**
  * Configuration functions for an App.
  */
-abstract contract AppConfig {
+abstract contract AppConfig is IAppConfig{
     event ResourceChanged(uint32 indexed id, uint256 indexed weight, OP indexed op);
     event ResourcePending(uint32 indexed id, uint256 indexed newWeight, OP indexed op);
-    struct ConfigEntry {
-        string resourceId;
-        uint256 weight;
-        uint32 index; // index in indexArray
-        // pending action
-        OP pendingOP;
-        uint256 pendingWeight;
-        /* when the pending action was submitted */
-        uint submitSeconds;
-        uint256 requestTimes;
-    }
+
     /* token id for fungible token (ERC20, APP Coin) */
     uint256 public constant FT_ID = 0;
     uint256 public constant AIRDROP_ID = 1; // privilege
@@ -38,9 +30,6 @@ abstract contract AppConfig {
     uint32[] public pendingIdArray;
     mapping(uint32=>bool) pendingIdMap;
     uint256 public pendingSeconds;
-
-    /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
-    enum OP {ADD/*0*/,UPDATE/*1*/,DELETE/*2*/, NO_PENDING/*3*/, PENDING_INIT_DEFAULT/*4*/}
 
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     struct ConfigRequest {

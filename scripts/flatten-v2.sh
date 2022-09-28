@@ -8,4 +8,7 @@ do
 #   hardhat flatten contracts/v2/AppFactory.sol > flatten/AppFactory.txt
 #   hardhat flatten contracts/upgrade-test/MyERC1967.sol > flatten/ERC1967Proxy.txt
 #   hardhat flatten contracts/upgrade-test/MyBeaconProxy.sol > flatten/BeaconProxy.txt
+
+#   hardhat flatten contracts/v2/ApiWeightToken.sol > flatten/ApiWeightToken.txt
+#   hardhat flatten contracts/v2/App.sol > flatten/App.txt
 done

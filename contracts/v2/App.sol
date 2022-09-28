@@ -5,12 +5,16 @@ import "./AppCore.sol";
 import "./VipCoinDeposit.sol";
 import "./VipCoinWithdraw.sol";
 import "./AppCoinV2.sol";
+import "./interfaces.sol";
 
 /**
  * @dev App represents an application to provide API or functionality service.
  */
 contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
-
+    // role who can charge coin from user
+    bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
+    // totalCharged fees produced by billing
+    uint256 public totalCharged;
     /**
      * @dev For initialization in proxy constructor.
      */
@@ -20,7 +24,46 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
     }
 
-    // TODO integrate API weight contract to consume VIP coins.
+    /** Billing service calls it to charge for api cost. */
+    function chargeBatch(IAppConfig.ChargeRequest[] memory requestArray) public onlyRole(CHARGE_ROLE) {
+        for(uint i=0; i<requestArray.length; i++) {
+            IAppConfig.ChargeRequest memory request = requestArray[i];
+            charge(request.account, request.amount, request.data, request.useDetail);
+        }
+    }
+    /** charge, consume airdrop first, then real quota. */
+    function charge(address account, uint256 amount, bytes memory /*data*/, IAppConfig.ResourceUseDetail[] memory useDetail) internal {
+        // consume airdrop
+        uint256 spendDrop = 0;
+        uint256 spendSuper = amount;
+        uint256 airdrop = vipCoin.balanceOf(account, TOKEN_ID_AIRDROP);
+        if (airdrop >= amount) {
+            // all amount is covered by airdrop.
+            spendDrop = amount;
+            spendSuper = 0;
+        } else if (airdrop > 0){
+            //  partial amount is covered by airdrop.
+            spendDrop = airdrop;
+            spendSuper = amount - airdrop;
+        }
+
+        if (spendDrop > 0) {
+            vipCoin.burn(account, TOKEN_ID_AIRDROP, spendDrop);
+        }
+        _charge(account, spendSuper, "", useDetail);
+    }
+    /* charge real quota without checking billing permission. **/
+    function _charge(address account, uint256 amount, bytes memory /*data*/, IAppConfig.ResourceUseDetail[] memory useDetail) internal {
+        vipCoin.burn(account, TOKEN_ID_COIN, amount);
+        totalCharged += amount;
+
+        apiWeightToken.addRequestTimes(account, useDetail);
+
+        if (withdrawSchedules[account] > 1) {
+            // refund
+            _withdraw(msg.sender, account, account, true);
+        }
+    }
 
     // TODO integrate VIP card in advance.
 
