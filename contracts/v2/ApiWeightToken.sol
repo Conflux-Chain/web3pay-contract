@@ -17,6 +17,7 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
     IApp public belongsToApp;
+    uint256 public totalRequests;
 
     constructor(
         IApp belongsTo,
@@ -50,6 +51,21 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
         ConfigRequest memory request = ConfigRequest(0, "default", defaultWeight, OP.ADD);
         _configResource(request);
         _flushPendingConfig(0);
+    }
+
+    function addRequestTimes(address account, ResourceUseDetail[] memory useDetail) external {
+        require(msg.sender == address(belongsToApp), "not from app");
+        for(uint i=0; i<useDetail.length; i++) {
+            uint32 id = useDetail[i].id;
+            ConfigEntry storage config = resourceConfigures[id];
+            if (indexArray[config.index] == 0) {
+                // id is zero, indicates this config doesn't exist
+                continue;
+            }
+            config.requestTimes += useDetail[i].times;
+            userRequestCounter[account][id] += useDetail[i].times;
+            totalRequests += useDetail[i].times;
+        }
     }
 
     /**

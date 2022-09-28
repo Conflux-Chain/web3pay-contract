@@ -67,18 +67,6 @@ contract APPCoin is ERC1155, AppConfig, Pausable, Ownable, IERC777Recipient, IER
      */
     uint256[37] private __gap;
 
-    struct ResourceUseDetail {
-        uint32 id;
-        uint256 times;
-    }
-    struct ChargeRequest {
-        address account;
-        uint256 amount;
-        bytes data;
-        /* resource consumed under this charge */
-        ResourceUseDetail[] useDetail;
-    }
-
     function tokensReceived(address /*operator*/, address from, address /*to*/, uint256 amount, bytes calldata /*userData*/, bytes calldata /*operatorData*/)
         override external whenNotPaused {
         require(msg.sender == apiCoin, 'ApiCoin Required');//ApiCoin Required

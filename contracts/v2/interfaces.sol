@@ -22,12 +22,17 @@ interface IVipCoinWithdraw {
         uint256 value
     ) external ;
 }
-interface IVipCoin is IVipCoinDeposit, IVipCoinWithdraw, IERC1155{
+interface IVipCoin is IERC1155{
     function mint(
         address to,
         uint256 id,
         uint256 amount,
         bytes memory data
+    ) external;
+    function burn(
+        address account,
+        uint256 id,
+        uint256 value
     ) external;
 }
 
@@ -64,4 +69,30 @@ interface ICards {
 }
 interface ICardTracker {
     function applyCard(address from, address to, ICards.Card memory card) external;
+}
+interface IAppConfig {
+    struct ResourceUseDetail {
+        uint32 id;
+        uint256 times;
+    }
+    struct ChargeRequest {
+        address account;
+        uint256 amount;
+        bytes data;
+        /* resource consumed under this charge */
+        ResourceUseDetail[] useDetail;
+    }
+    struct ConfigEntry {
+        string resourceId;
+        uint256 weight;
+        uint32 index; // index in indexArray
+        // pending action
+        OP pendingOP;
+        uint256 pendingWeight;
+        /* when the pending action was submitted */
+        uint submitSeconds;
+        uint256 requestTimes;
+    }
+    /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
+    enum OP {ADD/*0*/,UPDATE/*1*/,DELETE/*2*/, NO_PENDING/*3*/, PENDING_INIT_DEFAULT/*4*/}
 }

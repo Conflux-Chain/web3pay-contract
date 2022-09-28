@@ -1,7 +1,18 @@
-import {attach, deployV2App, networkInfo, timestampLog, tokensEthFork, tokensNet71, waitTx} from "./lib";
+import {
+    attach,
+    deploy,
+    DEPLOY_V2_INFO,
+    deployV2App,
+    networkInfo,
+    timestampLog,
+    tokensEthFork,
+    tokensNet71,
+    waitTx
+} from "./lib";
 import {formatEther, formatUnits, parseEther} from "ethers/lib/utils";
-import {AppCoinV2, ERC1967Proxy, SwapExchange} from "../typechain";
+import {ApiWeightTokenFactory, AppCoinV2, ERC1967Proxy, SwapExchange, UpgradeableBeacon} from "../typechain";
 import {ethers, upgrades} from "hardhat";
+import fs from "fs";
 
 async function checkContract(addr:string) {
     console.log(`check contract at ${addr}`)
@@ -10,11 +21,33 @@ async function checkContract(addr:string) {
 }
 async function main() {
     timestampLog()
-    const  {signer, account:acc1} = await networkInfo()
+    const  {signer, account:acc1, chainId} = await networkInfo()
+    // await deployAllV2(acc1);
     // await checkContract(exchange.address);
-    await deploy(acc1);
+
+    const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+    await upgradeApiWeight(apiWeightFactoryProxy);
+    await upgradeApp(appFactoryProxy);
 }
-async function deploy(acc1: string) {
+async function upgradeApiWeight(factoryAddr:string) {
+    return upgradeFactory("ApiWeightToken", [ethers.constants.AddressZero, "","",""], factoryAddr)
+}
+async function upgradeApp(factoryAddr:string) {
+    return upgradeFactory("App", [], factoryAddr);
+}
+async function upgradeFactory(implName:string, argv:any[], factoryAddr:string) {
+    const factory = await attach("ApiWeightTokenFactory", factoryAddr) as ApiWeightTokenFactory;
+    const beacon = await factory.beacon()
+    console.log(`beacon at ${beacon}`)
+    return upgrade(implName, argv, beacon);
+}
+async function upgrade(name:string, argv:any[], beacon:string) {
+    const impl = await deploy(name, argv);
+    const beaconContract = await attach("UpgradeableBeacon", beacon) as UpgradeableBeacon;
+    await beaconContract.upgradeTo(impl!.address);
+    console.log(`upgraded ${name} ${impl!.address}`);
+}
+async function deployAllV2(acc1: string) {
     const {usdt, __router} = tokensNet71;
     const {v2app, exchange, appX, assetToken} = await deployV2App(usdt, __router)
     // const {v2app, exchange, vipCoin, appX} = await deployV2App(tokensEthFork.usdt, tokensEthFork.__router)
