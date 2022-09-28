@@ -4,7 +4,7 @@ import {formatEther, parseEther} from "ethers/lib/utils";
 import {
 	ApiWeightToken, ApiWeightTokenFactory,
 	App,
-	AppCoinV2, AppRegistry,
+	AppCoinV2, AppFactory, AppRegistry,
 	Cards,
 	CardShop,
 	CardTemplate,
@@ -12,7 +12,7 @@ import {
 	IERC20,
 	ISwap, MyERC1967,
 	SwapExchange,
-	TokenRouter, VipCoin, VipCoinFactory
+	TokenRouter, UpgradeableBeacon, VipCoin, VipCoinFactory
 } from "../typechain";
 import fs from "fs";
 export const tokensNet71 = {
@@ -73,11 +73,12 @@ export async function mintERC20(token:string, to:string, amount:string) {
 }
 export async function deployWithProxy(implName:string, initArgv: any[]) {
 	const impl = await deploy(implName, []);
-	const initReq = await impl!.populateTransaction['initialize'](...initArgv);
+	const initReq = initArgv.length ? await impl!.populateTransaction['initialize'](...initArgv) : {data: Buffer.from("")};
 	const proxy = await deploy("ERC1967Proxy", [impl?.address, initReq!.data])
 	const instance = await attach(implName, proxy!.address);
 	return {impl, proxy, instance}
 }
+export const DEPLOY_V2_INFO = `./artifacts/deploy-v2.json.txt`
 export async function deployV2App(asset: string, swap:string) {
 	console.log(`use asset ${asset}`)
 	const v2app = await deploy("AppCoinV2", [asset]) as AppCoinV2;
@@ -91,13 +92,17 @@ export async function deployV2App(asset: string, swap:string) {
 
 
 	const apiWeightTokenImpl = await deploy("ApiWeightToken", [ethers.constants.AddressZero, "", "", ""]) as ApiWeightToken;
-	const {instance: apiWeightFactory} = await deployWithProxy("ApiWeightTokenFactory", [apiWeightTokenImpl.address, appOwner]);
+	const {instance: apiWeightFactory, impl: apiWeightFactoryImpl} = await deployWithProxy("ApiWeightTokenFactory", [apiWeightTokenImpl.address, appOwner]);
 
-	const vipCoinFactory = await deploy("VipCoinFactory", []) as VipCoinFactory;
-	const {proxy:appFactory} = await deployWithProxy("AppFactory",
+	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl} = await deployWithProxy("VipCoinFactory", []);
+	const {proxy:appFactoryProxy, instance: appFactoryInst, impl:appFactoryImpl} = await deployWithProxy("AppFactory",
 		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, appOwner])
+	const appFactory = appFactoryInst as AppFactory;
+	const appUpBeacon = await appFactory.beacon().then(res=>attach("UpgradeableBeacon", res)).then(res=>res as UpgradeableBeacon)
+	const appImpl = await appUpBeacon.implementation();
 
-	const {instance: appRegistryInst} = await deployWithProxy("AppRegistry", [appFactory!.address])
+	const {instance: appRegistryInst, impl: appRegistryImpl} = await deployWithProxy("AppRegistry", [appFactoryProxy!.address])
+
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
 	await appRegistry.create("app x", "appX", "uri", 0, 1, appOwner).then(waitTx);
@@ -108,6 +113,19 @@ export async function deployV2App(asset: string, swap:string) {
 	const vipCoinAddr = await appX.vipCoin()
 	const vipCoin = await attach("VipCoin", vipCoinAddr) as VipCoin;
 	const assetToken = await attach("ERC20", asset) as ERC20;
+
+	const deployInfo = {
+		AppCoinV2: v2app.address,
+		exchangeImpl: exchangeImpl.address,		exchangeProxy: exchange.address,
+		apiWeightTokenImpl: apiWeightTokenImpl.address,
+		apiWeightFactoryImpl: apiWeightFactoryImpl?.address, apiWeightFactoryProxy: apiWeightFactory.address,
+		vipCoinFactoryImpl: vipCoinFactoryImpl?.address, vipCoinFactoryProxy: vipCoinFactory.address,
+		appImpl, appUpgradableBeacon: appUpBeacon.address,
+		appFactoryImpl: appFactoryImpl?.address, appFactoryProxy: appFactoryProxy?.address,
+		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address,
+	}
+	const {chainId} = await ethers.provider.getNetwork()
+	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`), JSON.stringify(deployInfo, null, 4))
 	return {v2app, exchange, vipCoin, appX, assetToken};
 }
 export function timestampLog() {

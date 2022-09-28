@@ -24,8 +24,8 @@ export async function verifyContract(contract: string, address: string) {
 		JSON.stringify(resultJson, null, 4))
 	delete resultJson["sourceCode"]
 	delete resultJson["abi"]
-	const {exactMatch, errors} = resultJson;
-	console.log(`result ${contract} , exactMatch `,exactMatch,` errors [${(errors||[]).join(',')}]`, )
+	const {exactMatch, errors, result: {errors: resultErrors}} = resultJson;
+	console.log(`result ${contract} , exactMatch `,exactMatch,` errors [${(errors||resultErrors||[]).join(',')}]`, )
 }
 async function verifyAsync(host:string, address:string, contract:string) {
 	return new Promise<string>(resolve => verify(host, address, contract, resolve))
@@ -52,13 +52,14 @@ function verify(host:string, address:string, contract:string, fn:(str:string)=>v
 		headers: {
 			'Content-Type': 'application/json',
 			'Accept': 'application/json',
-			'Content-Length': data.length
 		}
 	}
 
 	const req = https.request(options, (res: IncomingMessage) => {
-		console.log(`status code: ${res.statusCode}`)
-
+		console.log(`status code: ${res.statusCode} ${contract}`)
+		if (res.statusCode == 400) {
+			console.log(`request data length ${data.length}, source code length ${source.length}, ${contract}`)
+		}
 		const array:string[] = []
 		res.on('data', (d: string | Uint8Array) => {
 			array.push(d.toString())
