@@ -11,13 +11,21 @@ export async function gen(dir:string) {
 
 }
 export async function main() {
-	let saveAtDir = './abi'
-	let path = './artifacts/contracts';
+	const version = "/v2"
+	let saveAtDir = `./abi${version}`
+	if (!fs.existsSync(saveAtDir)) {
+		fs.mkdirSync(saveAtDir)
+	}
+	let path = `./artifacts/contracts${version}`;
 	const files = fs.readdirSync(path)
 	console.log(`found ${files.length} file(s) at ${path}`)
 	for (let dir of files) {
 		const name = dir.split('.')[0]
-		const json = require(`.${path}/${dir}/${name}.json`)
+		let jsonPath = `.${path}/${dir}/${name}.json`;
+		if (!fs.existsSync(jsonPath)) {
+			continue
+		}
+		const json = require(jsonPath);
 		await fs.writeFileSync(`${saveAtDir}/${name}.abi`, JSON.stringify(json.abi, null, 4))
 		await fs.writeFileSync(`${saveAtDir}/${name}.json`, JSON.stringify({abi: json.abi}, null, 4))
 		console.log(`generate for ${name}`)
