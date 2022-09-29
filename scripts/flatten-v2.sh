@@ -1,4 +1,4 @@
-declare -a arr=("AppCoinV2" "SwapExchange" "ApiWeightToken" "ApiWeightTokenFactory" "VipCoin" "VipCoinFactory" "App" "AppRegistry" "AppFactory" "Cards" "CardShop" "CardTemplate" "CardTracker")
+declare -a arr=("AppCoinV2" "SwapExchange" "ApiWeightToken" "ApiWeightTokenFactory" "VipCoin" "VipCoinFactory" "App" "AppRegistry" "AppFactory" "CardShop" "CardTemplate" "CardTracker" "CardShopFactory")
 
 ## now loop through the above array
 for name in "${arr[@]}"

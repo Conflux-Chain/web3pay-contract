@@ -6,6 +6,7 @@ import "./VipCoinDeposit.sol";
 import "./VipCoinWithdraw.sol";
 import "./AppCoinV2.sol";
 import "./interfaces.sol";
+import "./CardShop.sol";
 
 /**
  * @dev App represents an application to provide API or functionality service.
@@ -15,13 +16,17 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
     // totalCharged fees produced by billing
     uint256 public totalCharged;
+    CardShop public cardShop;
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(AppCoinV2 appCoin_, IVipCoin vipCoin_, ApiWeightToken apiWeightToken_, uint256 deferTimeSecs_, address owner, IAppRegistry appRegitry_) public initializer {
+    function initialize(AppCoinV2 appCoin_, IVipCoin vipCoin_, ApiWeightToken apiWeightToken_, CardShop cardShop_, uint256 deferTimeSecs_, address owner, IAppRegistry appRegitry_) public initializer {
         __AppCore_init(appCoin_, vipCoin_, apiWeightToken_, owner);
         __VipCoinDeposit_init(owner, appRegitry_);
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
+        _grantRole(Roles.CONFIG_ROLE, owner);
+        _grantRole(CHARGE_ROLE, owner);
+        cardShop = cardShop_;
     }
 
     /** Billing service calls it to charge for api cost. */

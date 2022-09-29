@@ -5,7 +5,6 @@ import {
 	ApiWeightToken, ApiWeightTokenFactory,
 	App,
 	AppCoinV2, AppFactory, AppRegistry,
-	Cards,
 	CardShop,
 	CardTemplate,
 	CardTracker, ERC1967Proxy, ERC20,
@@ -71,6 +70,11 @@ export async function mintERC20(token:string, to:string, amount:string) {
 	await contract['mint'](to, parseEther(amount)).then((tx:ContractTransaction)=>tx.wait())
 	console.log(`mint ${await contract['name']()} ${token} to ${to} x ${amount}`)
 }
+export async function deployBeacon(implName:string, argv: any[]) {
+	const impl = await deploy(implName, argv);
+	const beacon = await deploy("UpgradeableBeacon", [impl!.address]) as UpgradeableBeacon;
+	return {impl, beacon}
+}
 export async function deployWithProxy(implName:string, initArgv: any[]) {
 	const impl = await deploy(implName, []);
 	const initReq = initArgv.length ? await impl!.populateTransaction['initialize'](...initArgv) : {data: Buffer.from("")};
@@ -95,8 +99,13 @@ export async function deployV2App(asset: string, swap:string) {
 	const {instance: apiWeightFactory, impl: apiWeightFactoryImpl} = await deployWithProxy("ApiWeightTokenFactory", [apiWeightTokenImpl.address, appOwner]);
 
 	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl} = await deployWithProxy("VipCoinFactory", []);
+	const {impl: cardTemplateImpl, beacon: cardTemplateBeacon} = await deployBeacon("CardTemplate", []);
+	const {impl: cardTrackerImpl, beacon: cardTrackerBeacon} = await deployBeacon("CardTracker", [ethers.constants.AddressZero]);
+	const {impl: cardShopImpl, beacon: cardShopBeacon} = await deployBeacon("CardShop",[]);
+	const {proxy:cardShopFactoryProxy, impl:carShopFactoryImpl} = await deployWithProxy("CardShopFactory",
+		[cardShopBeacon.address, cardTemplateBeacon.address, cardTrackerBeacon.address])
 	const {proxy:appFactoryProxy, instance: appFactoryInst, impl:appFactoryImpl} = await deployWithProxy("AppFactory",
-		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, appOwner])
+		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, cardShopFactoryProxy?.address, appOwner])
 	const appFactory = appFactoryInst as AppFactory;
 	const appUpBeacon = await appFactory.beacon().then(res=>attach("UpgradeableBeacon", res)).then(res=>res as UpgradeableBeacon)
 	const appImpl = await appUpBeacon.implementation();
@@ -120,6 +129,9 @@ export async function deployV2App(asset: string, swap:string) {
 		apiWeightTokenImpl: apiWeightTokenImpl.address,
 		apiWeightFactoryImpl: apiWeightFactoryImpl?.address, apiWeightFactoryProxy: apiWeightFactory.address,
 		vipCoinFactoryImpl: vipCoinFactoryImpl?.address, vipCoinFactoryProxy: vipCoinFactory.address,
+		cardTemplateImpl: cardTemplateImpl!.address, cardTrackerImpl: cardTrackerImpl!.address, cardShopImpl:cardShopImpl!.address,
+		cardTemplateBeacon:cardTemplateBeacon!.address, cardTrackerBeacon:cardTrackerBeacon!.address, cardShopBeacon:cardShopBeacon!.address,
+		carShopFactoryImpl:carShopFactoryImpl!.address, cardShopFactoryProxy:cardShopFactoryProxy!.address,
 		appImpl, appUpgradableBeacon: appUpBeacon.address,
 		appFactoryImpl: appFactoryImpl?.address, appFactoryProxy: appFactoryProxy?.address,
 		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address,
@@ -128,15 +140,7 @@ export async function deployV2App(asset: string, swap:string) {
 	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`), JSON.stringify(deployInfo, null, 4))
 	return {v2app, exchange, vipCoin, appX, assetToken};
 }
-export function timestampLog() {
-	const rawLog = console.log;
-	console.log = function () {
-		process.stdout.write(new Date().toISOString())
-		process.stdout.write(' ')
-		// @ts-ignore
-		rawLog.apply(console, arguments);
-	}
-}
+
 export async function networkInfo() {
 	const [signer] = await ethers.getSigners()
 	const acc1 = signer.address
@@ -184,21 +188,4 @@ export async function deploy(name:string, args:any[]) {
 
 	console.log(name+" deployed to:", deployer.address);
 	return instance;
-}
-export const DEPLOY_CARD_INFO = `./artifacts/deploy-card.json.txt`;
-export async function deployCardContracts() {
-	const shop = await deploy("CardShop", []) as CardShop;
-	const name = "Cards Test", symbol = "cards"
-	const inst = await deploy("Cards", [name, symbol, ""]) as Cards;
-	const template = await deploy("CardTemplate", []) as CardTemplate;
-	const tracker = await deploy("CardTracker", [inst.address]) as CardTracker;
-	await shop.initialize(template.address, inst.address, tracker.address).then(waitTx)
-	const deployInfo = {
-		shop: shop.address,
-		cards: inst.address,
-		template: template.address,
-		tracker: tracker.address,
-	}
-	await fs.writeFileSync(DEPLOY_CARD_INFO, JSON.stringify(deployInfo, null, 4))
-	return {shop, template, inst, tracker}
 }

@@ -10,7 +10,16 @@ import {
     waitTx
 } from "./lib";
 import {formatEther, formatUnits, parseEther} from "ethers/lib/utils";
-import {ApiWeightTokenFactory, AppCoinV2, ERC1967Proxy, SwapExchange, UpgradeableBeacon} from "../typechain";
+import {
+    ApiWeightToken,
+    ApiWeightTokenFactory,
+    AppCoinV2,
+    CardShop,
+    CardTemplate, CardTracker,
+    ERC1967Proxy,
+    SwapExchange,
+    UpgradeableBeacon
+} from "../typechain";
 import {ethers, upgrades} from "hardhat";
 import fs from "fs";
 
@@ -22,12 +31,12 @@ async function checkContract(addr:string) {
 async function main() {
     timestampLog()
     const  {signer, account:acc1, chainId} = await networkInfo()
-    // await deployAllV2(acc1);
+    await deployAllV2(acc1);
     // await checkContract(exchange.address);
 
-    const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
-    await upgradeApiWeight(apiWeightFactoryProxy);
-    await upgradeApp(appFactoryProxy);
+    // const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+    // await upgradeApiWeight(apiWeightFactoryProxy);
+    // await upgradeApp(appFactoryProxy);
 }
 async function upgradeApiWeight(factoryAddr:string) {
     return upgradeFactory("ApiWeightToken", [ethers.constants.AddressZero, "","",""], factoryAddr)
@@ -83,6 +92,32 @@ async function deployAllV2(acc1: string) {
     console.log(`base asset balance ${await assetToken.balanceOf(acc1)}`)
     await assetToken.approve(appX.address, acAmount).then(waitTx)
     await appX.depositAsset(acAmount, acc1).then(waitTx)
+
+    // card
+    const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
+    const template = await attach("CardTemplate", await shop.template()) as CardTemplate;
+    const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
+    await template.config({
+        closeSaleAt: 0, description: "", duration: 1, icon: "/favicon.ico", id: 0,// will auto generate
+        level: 1, listPrice: 2, name: "test card", openSaleAt: 3, price: 4, salesLimit: 5, status: 1
+    }).then(waitTx)
+    const templateId = await template.nextId().then(res=>res.sub(1));
+    console.log(`config card template ok, id ${templateId} level `, await template.getTemplate(templateId).then(res=>res.level));
+    await shop.buy(acc1, templateId).then(waitTx)
+    console.log(`buy card ok`)
+    console.log(`vip level`, await tracker.getVipInfo(acc1).then(({expireAt, level})=>`level ${level} expireAt ${expireAt}`))
+    // config
+    const apiConfig = await appX.apiWeightToken().then(res=>attach("ApiWeightToken", res)).then(res=>res as ApiWeightToken)
+    await apiConfig.setPendingSeconds(0).then(waitTx);
+    console.log(`set setPendingSeconds ok`)
+    await apiConfig.configResource({id: 0, op: 0, resourceId: "test-api-w", weight: 3}).then(waitTx);
+    console.log(`configResource ok`)
+    await apiConfig.flushPendingConfig().then(waitTx)
+    console.log(`flushPendingConfig ok, weight `, await apiConfig.listResources(0, 9).then(res=>res[0]).then(list=>list[1].weight))
+    // charge
+    await appX.chargeBatch([{account: acc1, amount: 1, data: Buffer.from(""),
+        useDetail: [{id: 0, times: 1}]}]).then(waitTx)
+    console.log(`charge ok`)
 }
 main().catch((error) => {
     console.error(error);
