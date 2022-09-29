@@ -1,7 +1,7 @@
 # web3pay-contract
 Smart contracts for Web3 payment service.
 
-[Contract Docs](./docs/README.md)
+[Contract Docs](./docs/v2/v2.md)
 
 Quick start:
 
