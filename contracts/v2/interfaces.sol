@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/access/IAccessControl.sol";
 
 interface IWithdrawHook {
     function withdrawEth(address receiver, uint256 ethMin) external;
 }
-interface IApp {
+interface IApp is IAccessControl{
     function getAppCoin() external returns (address);
 }
 interface IAppRegistry {
@@ -53,7 +54,7 @@ interface ICardTemplate {
         uint8 level;
     }
 
-    function getTemplate(uint id) external returns (Template memory);
+    function getTemplate(uint id) external view returns (Template memory);
 }
 interface ICards {
     struct Card {
@@ -65,9 +66,14 @@ interface ICards {
         uint duration;
         uint8 level;
     }
-    function makeCard(address to, Card memory card, uint amount, ICardTracker tracker) external;
+    function makeCard(address to, Card memory card, uint amount) external;
 }
 interface ICardTracker {
+    struct VipInfo {
+        uint expireAt;
+        uint8 level; // starts from 1
+    }
+    function getVipInfo(address account) external view returns (VipInfo memory);
     function applyCard(address from, address to, ICards.Card memory card) external;
 }
 interface IAppConfig {

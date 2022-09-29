@@ -5,21 +5,28 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "./interfaces.sol";
-
+import "./Roles.sol";
 //import "hardhat/console.sol";
 
 //TODO access control
 contract CardShop {
+    IApp public belongsToApp;
     ICardTemplate public template;
     ICards public instance;
     ICardTracker public tracker;
 
+    //TODO add query functions
+    //save card information.
+    mapping(uint=>ICards.Card) cards;
+
     event GAVEN_CARD(address indexed operator, address indexed to, uint cardId);
 
-    function initialize(ICardTemplate template_, ICards instance_, ICardTracker tracker_) public {
+    function initialize(IApp belongsTo_, ICardTemplate template_, ICards instance_, ICardTracker tracker_) public {
+        require(address(belongsToApp) == address(0), "already initialized");
         template = template_;
         instance = instance_;
         tracker = tracker_;
+        belongsToApp = belongsTo_;
     }
 
     function buy(address receiver, uint templateId) public {
@@ -31,15 +38,20 @@ contract CardShop {
     }
 
     function giveCard(address receiver, uint templateId) public {
+        require(belongsToApp.hasRole(Roles.AIRDROP_ROLE, msg.sender), "");
         ICardTemplate.Template memory template_ = template.getTemplate(templateId);
         require(template_.id > 0, "template not found");
         uint cardId = _callMakeCard(receiver, template_);
         emit GAVEN_CARD(msg.sender, receiver, cardId);
     }
 
+    function getCard(uint id) public view returns (ICards.Card memory){
+        return cards[id];
+    }
+
     function _callMakeCard(address to, ICardTemplate.Template memory template_) internal returns (uint){
         uint cardId = template_.id; //TODO add algorithm
-        ICards.Card memory card = Cards.Card(
+        ICards.Card memory card = ICards.Card(
             cardId,
             template_.id,
             template_.name,
@@ -49,7 +61,9 @@ contract CardShop {
             template_.level
         );
         //TODO buy more than 1 at once
-        instance.makeCard(to, card, 1, tracker);
+        instance.makeCard(to, card, 1);
+        cards[cardId] = card;
+        tracker.applyCard(address(0), to, card);
         return cardId;
     }
 

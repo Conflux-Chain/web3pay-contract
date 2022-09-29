@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "./interfaces.sol";
+import "./Roles.sol";
+
 //import "hardhat/console.sol";
 
 //TODO:
@@ -11,26 +14,23 @@ pragma solidity ^0.8.4;
 /**
  * Provider manages card templates here.
  */
-contract CardTemplate {
-    struct Template {
-        uint id;
-        string name;
-        string description;
-        string icon;
-        uint duration;
-        uint price;  // actual selling price
-        uint8  status; //TODO enum status
-        uint8 level;
-    }
+contract CardTemplate is ICardTemplate{
+    IApp public belongsToApp;
     uint public nextId = 1;
     mapping(uint=>Template) templates;
 
-    function getTemplate(uint id) public view returns (Template memory t) {
+    function initialize(IApp belongsTo_) public {
+        require(address(belongsToApp) == address(0), "already initialized");
+        belongsToApp = belongsTo_;
+    }
+
+    function getTemplate(uint id) public override view returns (Template memory t) {
         t = templates[id];
         //console.log("get template, duration is :", t.duration);
     }
 
     function config(Template memory template) external {
+        require(belongsToApp.hasRole(Roles.CONFIG_ROLE, msg.sender), "require config role");
         if (template.id == 0) {
             template.id = nextId;
             nextId += 1;

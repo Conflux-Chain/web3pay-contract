@@ -8,13 +8,12 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "../AppConfig.sol";
 import "./TokenNameSymbol.sol";
 import "./interfaces.sol";
+import "./Roles.sol";
 
 /**
  * Config api weights and display as 1155 NFT.
  */
-contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, TokenNameSymbol, AppConfig {
-    // role to configure resource weight
-    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
+contract ApiWeightToken is ERC1155, ERC1155Holder, TokenNameSymbol, AppConfig {
 
     IApp public belongsToApp;
     uint256 public totalRequests;
@@ -26,8 +25,6 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
         string memory uri
     ) ERC1155(uri) TokenNameSymbol(name, symbol)  {
         belongsToApp = belongsTo;
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _grantRole(CONFIG_ROLE, _msgSender());
     }
 
     function initialize(
@@ -35,16 +32,13 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
         string memory name,
         string memory symbol,
         string memory uri,
-        address owner,
         uint defaultWeight
     ) public {
-        require(getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 0 || hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "not rights");
+        require(address(belongsToApp) == address(0), "already initialized");
         belongsToApp = belongsTo;
         _name = name;
         _symbol = symbol;
         _setURI(uri);
-        _grantRole(DEFAULT_ADMIN_ROLE, owner);
-        _grantRole(CONFIG_ROLE, owner);
 
         pendingSeconds = 3600 * 24 * 7;
         nextConfigId = FIRST_CONFIG_ID;
@@ -111,13 +105,13 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, AccessControlEnumerable, Toke
     public
     view
     virtual
-    override(ERC1155, ERC1155Receiver, AccessControlEnumerable)
+    override(ERC1155, ERC1155Receiver)
     returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
 
     function _authorizeAppConfig() internal view override {
-        require(hasRole(CONFIG_ROLE, _msgSender()), "require config role");
+        require(belongsToApp.hasRole(Roles.CONFIG_ROLE, _msgSender()), "require config role");
     }
 }
