@@ -10,6 +10,7 @@ import "./AppCoinV2.sol";
 import "./VipCoinFactory.sol";
 import "./App.sol";
 import "./ApiWeightTokenFactory.sol";
+import "./CardShopFactory.sol";
 
 contract AppFactory is Initializable {
 
@@ -18,6 +19,7 @@ contract AppFactory is Initializable {
     AppCoinV2 public appCoin;
     VipCoinFactory public vipCoinFactory;
     ApiWeightTokenFactory public apiWeightTokenFactory;
+    CardShopFactory public cardShopFactory;
     UpgradeableBeacon public beacon;
 
     constructor() {
@@ -28,11 +30,13 @@ contract AppFactory is Initializable {
         AppCoinV2 appCoin_,
         VipCoinFactory vipCoinFactory_,
         ApiWeightTokenFactory apiWeightTokenFactory_,
+        CardShopFactory cardShopFactory_,
         address beaconOwner
     ) public initializer {
         appCoin = appCoin_;
         vipCoinFactory = vipCoinFactory_;
         apiWeightTokenFactory = apiWeightTokenFactory_;
+        cardShopFactory = cardShopFactory_;
 
         App app = new App();
         beacon = new UpgradeableBeacon(address(app));
@@ -51,6 +55,7 @@ contract AppFactory is Initializable {
         App app = App(address(new BeaconProxy(address(beacon), "")));
 
         IVipCoin vipCoin = IVipCoin(vipCoinFactory.create(name, symbol, uri, owner, address(app)));
+
         ApiWeightToken apiWeightToken = ApiWeightToken(apiWeightTokenFactory.create(
             app,
             string(abi.encodePacked(name, " api")),
@@ -58,7 +63,9 @@ contract AppFactory is Initializable {
             uri, owner, defaultApiWeight
         ));
 
-        app.initialize(appCoin, vipCoin, apiWeightToken, deferTimeSecs, owner, appRegistry);
+        CardShop cardShop = CardShop(cardShopFactory.create(app));
+
+        app.initialize(appCoin, vipCoin, apiWeightToken, cardShop, deferTimeSecs, owner, appRegistry);
 
         emit Created(address(app), msg.sender, owner);
 

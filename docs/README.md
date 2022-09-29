@@ -1,4 +1,8 @@
 
+## V2 is available
+[V2](./v2/v2.md)
+#
+Deprecated contents.
 ## Payment Workflow
 0. Admin deploys API Coin Contract, sets its `baseToken`.
 1. Provider creates an app through `Controller`.

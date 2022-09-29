@@ -16,12 +16,13 @@ import "./Roles.sol";
  */
 contract CardTemplate is ICardTemplate{
     IApp public belongsToApp;
-    uint public nextId = 1;
+    uint public nextId;
     mapping(uint=>Template) templates;
 
     function initialize(IApp belongsTo_) public {
         require(address(belongsToApp) == address(0), "already initialized");
         belongsToApp = belongsTo_;
+        nextId = 10001;
     }
 
     function getTemplate(uint id) public override view returns (Template memory t) {
