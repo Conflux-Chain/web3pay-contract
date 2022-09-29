@@ -10,7 +10,7 @@ import "./interfaces.sol";
 /**
  * @dev App represents an application to provide API or functionality service.
  */
-contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
+contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
     // totalCharged fees produced by billing
@@ -65,6 +65,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw {
         }
     }
 
-    // TODO integrate VIP card in advance.
-
+    function makeCard(address to, Card memory card, uint amount) external override {
+        // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
+        require(card.id > TOKEN_ID_AIRDROP, "invalid token id");
+        vipCoin.mint(to, card.id, amount, "");
+    }
 }

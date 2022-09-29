@@ -5,19 +5,18 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 //import "hardhat/console.sol";
 import "./AppCore.sol";
+import "./Roles.sol";
 
-abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
+abstract contract VipCoinDeposit is IVipCoinDeposit, AppCore, ReentrancyGuard {
 
     event Deposit(address indexed operator, address indexed receiver, uint256 indexed tokenId, uint256 amount);
 
     uint256 public constant TOKEN_ID_AIRDROP = 1;
 
-    bytes32 public constant AIRDROP_ROLE = keccak256("AIRDROP_ROLE");
-
     IAppRegistry public appRegistry;
 
     function __VipCoinDeposit_init(address owner, IAppRegistry appRegistry_) internal onlyInitializing {
-        _setupRole(AIRDROP_ROLE, owner);
+        _setupRole(Roles.AIRDROP_ROLE, owner);
 
         appRegistry = appRegistry_;
     }
@@ -27,7 +26,7 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
      *
      * The 1st amount is from user deposit, and the 2nd amount is from airdrop.
      */
-    function balanceOf(address account) public view returns (uint256, uint256) {
+    function balanceOf(address account) public view override returns (uint256, uint256) {
         uint256 coins = vipCoin.balanceOf(account, TOKEN_ID_COIN);
         uint256 airdrops = vipCoin.balanceOf(account, TOKEN_ID_AIRDROP);
         return (coins, airdrops);
@@ -36,7 +35,7 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
     /**
      * @dev Deposits `amount` of VIP coins for `receiver`.
      */
-    function deposit(uint256 amount, address receiver) public nonReentrant {
+    function deposit(uint256 amount, address receiver) public override nonReentrant {
 //        console.log("amount: %s , receiver %s", amount, receiver);
         SafeERC20.safeTransferFrom(appCoin, _msgSender(), address(this), amount);
         vipCoin.mint(receiver, TOKEN_ID_COIN, amount, "");
@@ -64,7 +63,7 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
     /**
      * @dev Air drops `amount` of VIP coins for `receiver`.
      */
-    function airdrop(address receiver, uint256 amount) public nonReentrant onlyRole(AIRDROP_ROLE) {
+    function airdrop(address receiver, uint256 amount) public nonReentrant onlyRole(Roles.AIRDROP_ROLE) {
         vipCoin.mint(receiver, TOKEN_ID_AIRDROP, amount, "");
         emit Deposit(_msgSender(), receiver, TOKEN_ID_AIRDROP, amount);
 
@@ -78,7 +77,7 @@ abstract contract VipCoinDeposit is AppCore, ReentrancyGuard {
         address[] memory receivers,
         uint256[] memory amounts,
         string[] memory reasons
-    ) public nonReentrant onlyRole(AIRDROP_ROLE) {
+    ) public nonReentrant onlyRole(Roles.AIRDROP_ROLE) {
         require(
             receivers.length == amounts.length && receivers.length == reasons.length,
             "App: length mismatch for parameters"

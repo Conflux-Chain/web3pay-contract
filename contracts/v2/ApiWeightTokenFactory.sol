@@ -30,7 +30,7 @@ contract ApiWeightTokenFactory is Initializable{
     ) public returns (address) {
         ApiWeightToken appConfig = ApiWeightToken(address(new BeaconProxy(address(beacon), "")));
 
-        appConfig.initialize(belongsTo, name, symbol, uri, owner, defaultWeight);
+        appConfig.initialize(belongsTo, name, symbol, uri, defaultWeight);
 
         emit Created(address(appConfig), msg.sender, owner);
 
