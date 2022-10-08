@@ -26,14 +26,15 @@ async function main() {
             verifyContract('CardTracker', cardTrackerImpl),
             verifyContract('CardShop', cardShopImpl),
 
-            verifyContract('ERC1967Proxy', exchangeProxy),
-            verifyContract('ERC1967Proxy', apiWeightFactoryProxy),
-            verifyContract('ERC1967Proxy', vipCoinFactoryProxy),
-            verifyContract('ERC1967Proxy', appFactoryProxy),
-            verifyContract('ERC1967Proxy', appRegistryProxy),
+            verifyContract('BeaconProxy', exchangeProxy),
+            verifyContract('BeaconProxy', apiWeightFactoryProxy),
+            verifyContract('BeaconProxy', vipCoinFactoryProxy),
+            verifyContract('BeaconProxy', appFactoryProxy),
+            verifyContract('BeaconProxy', appRegistryProxy),
 
             verifyContract('App', appImpl),
-            // verifyContract('BeaconProxy', 'created app address'),
+            // verifyContract('BeaconProxy', 'a beacon address'),
+            // verifyContract('ERC1967Proxy', 'a 1967 address'),
         ]
     )
 }
