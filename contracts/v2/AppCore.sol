@@ -13,7 +13,7 @@ abstract contract AppCore is Initializable, AccessControlEnumerable, IApp {
 
     AppCoinV2 internal appCoin;
     IVipCoin public vipCoin;
-    ApiWeightToken public apiWeightToken;
+    address public apiWeightToken;
 
     constructor() {
         _disableInitializers();
@@ -21,7 +21,7 @@ abstract contract AppCore is Initializable, AccessControlEnumerable, IApp {
     function getAppCoin() public view override returns(address) {
         return address(appCoin);
     }
-    function __AppCore_init(AppCoinV2 appCoin_, IVipCoin vipCoin_, ApiWeightToken apiWeightToken_, address owner) internal onlyInitializing {
+    function __AppCore_init(AppCoinV2 appCoin_, IVipCoin vipCoin_, address apiWeightToken_, address owner) internal onlyInitializing {
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
 
         appCoin = appCoin_;

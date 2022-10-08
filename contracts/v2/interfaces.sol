@@ -2,13 +2,22 @@
 pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "./AppCoinV2.sol";
 
 interface IWithdrawHook {
     function withdrawEth(address receiver, uint256 ethMin) external;
 }
 interface IApp is IAccessControl{
     function getAppCoin() external returns (address);
+    function initialize(
+        AppCoinV2 appCoin_, IVipCoin vipCoin_, address apiWeightToken_,
+        uint256 deferTimeSecs_,
+        address owner, IAppRegistry appRegistry_) external;
+    function setProps(
+        address cardShop_, string memory link_, string memory description_
+    ) external;
 }
+
 interface IAppRegistry {
     function addUser(address user) external returns (bool);
 }
@@ -101,4 +110,29 @@ interface IAppConfig {
     }
     /** Operation code for configuring resources, ADD 0; UPDATE: 1; DELETE: 2 */
     enum OP {ADD/*0*/,UPDATE/*1*/,DELETE/*2*/, NO_PENDING/*3*/, PENDING_INIT_DEFAULT/*4*/}
+}
+interface IVipCoinFactory {
+    function create(
+        string memory name,
+        string memory symbol,
+        string memory uri,
+        address owner,
+        address app
+    ) external returns (address);
+}
+interface ICardShopFactory {
+    function create(IApp belongsTo) external returns (address);
+}
+interface IApiWeightToken {
+    function addRequestTimes(address account, IAppConfig.ResourceUseDetail[] memory useDetail) external;
+}
+interface IApiWeightTokenFactory {
+    function create(
+        IApp belongsTo,
+        string memory name,
+        string memory symbol,
+        string memory uri,
+        address owner,
+        uint defaultWeight
+    ) external returns (address);
 }

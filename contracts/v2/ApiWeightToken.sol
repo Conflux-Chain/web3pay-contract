@@ -13,7 +13,7 @@ import "./Roles.sol";
 /**
  * Config api weights and display as 1155 NFT.
  */
-contract ApiWeightToken is ERC1155, ERC1155Holder, TokenNameSymbol, AppConfig {
+contract ApiWeightToken is ERC1155, ERC1155Holder, TokenNameSymbol, AppConfig, IApiWeightToken {
 
     IApp public belongsToApp;
     uint256 public totalRequests;
@@ -47,7 +47,7 @@ contract ApiWeightToken is ERC1155, ERC1155Holder, TokenNameSymbol, AppConfig {
         _flushPendingConfig(0);
     }
 
-    function addRequestTimes(address account, ResourceUseDetail[] memory useDetail) external {
+    function addRequestTimes(address account, ResourceUseDetail[] memory useDetail) external override {
         require(msg.sender == address(belongsToApp), "not from app");
         for(uint i=0; i<useDetail.length; i++) {
             uint32 id = useDetail[i].id;

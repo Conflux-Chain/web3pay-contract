@@ -14,19 +14,39 @@ import "./CardShop.sol";
 contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
+    bytes32 public constant TAKE_PROFIT_ROLE = keccak256("TAKE_PROFIT_ROLE");
     // totalCharged fees produced by billing
     uint256 public totalCharged;
-    CardShop public cardShop;
+    address public cardShop;
+    uint256 public totalTakenProfit;
+    string public link;
+    string public description;
     /**
      * @dev For initialization in proxy constructor.
      */
-    function initialize(AppCoinV2 appCoin_, IVipCoin vipCoin_, ApiWeightToken apiWeightToken_, CardShop cardShop_, uint256 deferTimeSecs_, address owner, IAppRegistry appRegitry_) public initializer {
+    function initialize(AppCoinV2 appCoin_, IVipCoin vipCoin_, address apiWeightToken_, uint256 deferTimeSecs_, address owner, IAppRegistry appRegistry_) public override initializer {
         __AppCore_init(appCoin_, vipCoin_, apiWeightToken_, owner);
-        __VipCoinDeposit_init(owner, appRegitry_);
+        __VipCoinDeposit_init(owner, appRegistry_);
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
         _grantRole(Roles.CONFIG_ROLE, owner);
         _grantRole(CHARGE_ROLE, owner);
+        _grantRole(TAKE_PROFIT_ROLE, owner);
+    }
+
+    // avoid stack too deep
+    function setProps(
+        address cardShop_, string memory link_, string memory description_
+    ) public override {
+        require(address(cardShop) == address(0), "already set");
         cardShop = cardShop_;
+        link = link_;
+        description = description_;
+    }
+
+    function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {
+        require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
+        totalTakenProfit += amount;
+        appCoin.redeem(amount, to, address(this));
     }
 
     /** Billing service calls it to charge for api cost. */
@@ -62,7 +82,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         vipCoin.burn(account, TOKEN_ID_COIN, amount);
         totalCharged += amount;
 
-        apiWeightToken.addRequestTimes(account, useDetail);
+        IApiWeightToken(apiWeightToken).addRequestTimes(account, useDetail);
 
         if (withdrawSchedules[account] > 1) {
             // refund
