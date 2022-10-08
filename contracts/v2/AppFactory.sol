@@ -31,14 +31,14 @@ contract AppFactory is Initializable {
         IVipCoinFactory vipCoinFactory_,
         IApiWeightTokenFactory apiWeightTokenFactory_,
         ICardShopFactory cardShopFactory_,
-        address appBeacon_
+        address beacon_
     ) public initializer {
         appCoin = appCoin_;
         vipCoinFactory = vipCoinFactory_;
         apiWeightTokenFactory = apiWeightTokenFactory_;
         cardShopFactory = cardShopFactory_;
 
-        beacon = appBeacon_;
+        beacon = UpgradeableBeacon(beacon_);
     }
 
     function create(
