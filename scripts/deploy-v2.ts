@@ -29,9 +29,10 @@ async function checkContract(addr:string) {
     console.log(`contract is `, tmpContract)
 }
 
-async function disable() {
-    const registry = await attach("AppRegistry", "0x892b8866939ddD86a3974D73E9A5657B230877c0") as AppRegistry
-    const {transactionHash} = await registry.setCreatorRoleDisabled(true).then(waitTx)
+async function setCreatorRoleDisabled(chainId:any, flag: boolean) {
+    const {appRegistryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+    const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry
+    const {transactionHash} = await registry.setCreatorRoleDisabled(flag).then(waitTx)
     console.log(`ok `, transactionHash)
 }
 
@@ -39,7 +40,7 @@ async function main() {
     timestampLog()
     const  {signer, account:acc1, chainId} = await networkInfo()
     await deployAllV2(acc1);
-    // await disable();
+    await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
     const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
