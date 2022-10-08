@@ -13,7 +13,7 @@ import {formatEther, formatUnits, parseEther} from "ethers/lib/utils";
 import {
     ApiWeightToken,
     ApiWeightTokenFactory,
-    AppCoinV2,
+    AppCoinV2, AppRegistry,
     CardShop,
     CardTemplate, CardTracker,
     ERC1967Proxy,
@@ -28,23 +28,38 @@ async function checkContract(addr:string) {
     const tmpContract = await ethers.getContractAt("SwapExchange", addr, )
     console.log(`contract is `, tmpContract)
 }
+
+async function disable() {
+    const registry = await attach("AppRegistry", "0x892b8866939ddD86a3974D73E9A5657B230877c0") as AppRegistry
+    const {transactionHash} = await registry.setCreatorRoleDisabled(true).then(waitTx)
+    console.log(`ok `, transactionHash)
+}
+
 async function main() {
     timestampLog()
     const  {signer, account:acc1, chainId} = await networkInfo()
     await deployAllV2(acc1);
+    // await disable();
     // await checkContract(exchange.address);
 
-    // const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+    const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
     // await upgradeApiWeight(apiWeightFactoryProxy);
     // await upgradeApp(appFactoryProxy);
+    // await upgradeFactory()
+}
+async function upgradeFactory(name: string, proxyAddr: string) {
+    const impl_ = await deploy(name, []);
+    const proxy = await attach("ERC1967Proxy", proxyAddr) as ERC1967Proxy;
+    // await proxy.
 }
 async function upgradeApiWeight(factoryAddr:string) {
-    return upgradeFactory("ApiWeightToken", [ethers.constants.AddressZero, "","",""], factoryAddr)
+    return upgradeBeaconInFactory("ApiWeightToken", [ethers.constants.AddressZero, "","",""], factoryAddr)
 }
 async function upgradeApp(factoryAddr:string) {
-    return upgradeFactory("App", [], factoryAddr);
+    return upgradeBeaconInFactory("App", [], factoryAddr);
 }
-async function upgradeFactory(implName:string, argv:any[], factoryAddr:string) {
+async function upgradeBeaconInFactory(implName:string, argv:any[], factoryAddr:string) {
+    //                                  This name only stands for `beacon()` interface.
     const factory = await attach("ApiWeightTokenFactory", factoryAddr) as ApiWeightTokenFactory;
     const beacon = await factory.beacon()
     console.log(`beacon at ${beacon}`)
@@ -61,13 +76,14 @@ async function deployAllV2(acc1: string) {
     const {v2app, exchange, appX, assetToken} = await deployV2App(usdt, __router)
     // const {v2app, exchange, vipCoin, appX} = await deployV2App(tokensEthFork.usdt, tokensEthFork.__router)
     console.log(`deploy v2 ok`)
-    const acAmount = 1//parseEther("1")
+    const acAmount = 10000//parseEther("1")
     const inAmt = await exchange.previewDepositETH(acAmount);
     await exchange.depositETH(acAmount * 3, acc1, {value: inAmt.mul(3)}).then(waitTx).then(({transactionHash})=>{
         console.log(`deposit eth tx hash ${transactionHash}`)
     })
     const balance = await v2app.balanceOf(acc1);
-    console.log(`app balance is ${balance} ${formatUnits(balance, 6)}, decimals ${await v2app.decimals()}`)
+    let decimals = await v2app.decimals();
+    console.log(`app balance is ${balance} ${formatUnits(balance, decimals)}, decimals ${decimals}`)
     await v2app.approve(exchange.address, acAmount).then(waitTx)
     console.log(`allowance`, await v2app.allowance(acc1, exchange.address))
     const {transactionHash} = await exchange.withdrawETH(acAmount, 0, acc1).then(waitTx);

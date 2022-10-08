@@ -75,7 +75,15 @@ export async function deployBeacon(implName:string, argv: any[]) {
 	const beacon = await deploy("UpgradeableBeacon", [impl!.address]) as UpgradeableBeacon;
 	return {impl, beacon}
 }
-export async function deployWithProxy(implName:string, initArgv: any[]) {
+export async function deployWithBeaconProxy(implName:string, initArgv: any[]) {
+	const {impl, beacon} = await deployBeacon(implName, []);
+
+	const initReq = initArgv.length ? await impl!.populateTransaction['initialize'](...initArgv) : {data: Buffer.from("")};
+	const proxy = await deploy("BeaconProxy", [beacon?.address, initReq!.data])
+	const instance = await attach(implName, proxy!.address);
+	return {impl, proxy, instance, beacon}
+}
+export async function deployWith1967Proxy(implName:string, initArgv: any[]) {
 	const impl = await deploy(implName, []);
 	const initReq = initArgv.length ? await impl!.populateTransaction['initialize'](...initArgv) : {data: Buffer.from("")};
 	const proxy = await deploy("ERC1967Proxy", [impl?.address, initReq!.data])
@@ -88,33 +96,35 @@ export async function deployV2App(asset: string, swap:string) {
 	const v2app = await deploy("AppCoinV2", [asset]) as AppCoinV2;
 	const appOwner = await v2app.signer.getAddress();
 	// proxy exchange
-	const exchangeImpl = await deploy("SwapExchange",[]) as SwapExchange;
-	const initReq = await exchangeImpl.populateTransaction.initialize(v2app.address, swap);
-	// await exchange.initialize(v2app.address, swap);
-	const exProxy = await deploy("ERC1967Proxy", [exchangeImpl.address, initReq.data]) as ERC1967Proxy
-	const exchange = await attach("SwapExchange", exProxy.address) as SwapExchange
+	const {impl: exchangeImpl, proxy: exProxy, instance: exchangeInst, beacon: exchangeBeacon} = await deployWithBeaconProxy("SwapExchange", [v2app.address, swap]);
+	const exchange = await attach("SwapExchange", exchangeInst.address) as SwapExchange;
 
 
 	const apiWeightTokenImpl = await deploy("ApiWeightToken", [ethers.constants.AddressZero, "", "", ""]) as ApiWeightToken;
-	const {instance: apiWeightFactory, impl: apiWeightFactoryImpl} = await deployWithProxy("ApiWeightTokenFactory", [apiWeightTokenImpl.address, appOwner]);
+	const {instance: apiWeightFactory, impl: apiWeightFactoryImpl, beacon: apiWeightFactoryBeacon} = await deployWithBeaconProxy("ApiWeightTokenFactory",
+		[apiWeightTokenImpl.address, appOwner]
+	);
+	const apiWeightTokenBeacon = await (apiWeightFactory as ApiWeightTokenFactory).beacon();
 
-	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl} = await deployWithProxy("VipCoinFactory", []);
+	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl, beacon: vipCoinFactoryBeacon} = await deployWithBeaconProxy("VipCoinFactory", []);
+
 	const {impl: cardTemplateImpl, beacon: cardTemplateBeacon} = await deployBeacon("CardTemplate", []);
 	const {impl: cardTrackerImpl, beacon: cardTrackerBeacon} = await deployBeacon("CardTracker", [ethers.constants.AddressZero]);
 	const {impl: cardShopImpl, beacon: cardShopBeacon} = await deployBeacon("CardShop",[]);
-	const {proxy:cardShopFactoryProxy, impl:carShopFactoryImpl} = await deployWithProxy("CardShopFactory",
-		[cardShopBeacon.address, cardTemplateBeacon.address, cardTrackerBeacon.address])
-	const {proxy:appFactoryProxy, instance: appFactoryInst, impl:appFactoryImpl} = await deployWithProxy("AppFactory",
-		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, cardShopFactoryProxy?.address, appOwner])
-	const appFactory = appFactoryInst as AppFactory;
-	const appUpBeacon = await appFactory.beacon().then(res=>attach("UpgradeableBeacon", res)).then(res=>res as UpgradeableBeacon)
-	const appImpl = await appUpBeacon.implementation();
 
-	const {instance: appRegistryInst, impl: appRegistryImpl} = await deployWithProxy("AppRegistry", [appFactoryProxy!.address])
+	const {proxy:cardShopFactoryProxy, impl:carShopFactoryImpl, beacon: cardShopFactoryBeacon} = await deployWithBeaconProxy("CardShopFactory",
+		[cardShopBeacon.address, cardTemplateBeacon.address, cardTrackerBeacon.address])
+
+	const {impl: appImpl, beacon: appBeacon} = await deployBeacon("App",[]);
+	const {proxy:appFactoryProxy, instance: appFactoryInst, impl:appFactoryImpl, beacon: appFactoryBeacon} = await deployWithBeaconProxy("AppFactory",
+		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, cardShopFactoryProxy?.address, appBeacon.address])
+	const appUpBeacon = appBeacon;
+
+	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} = await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address])
 
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
-	await appRegistry.create("app x", "appX", "uri", 0, 1, appOwner).then(waitTx);
+	await appRegistry.create("app x", "appX", "my link", "my desc",0, 1, appOwner).then(waitTx);
 	const [total, createdList] = await appRegistry.listByOwner(appOwner, 0, 100)
 	const lastApp = createdList[createdList.length - 1];
 	//
@@ -125,16 +135,27 @@ export async function deployV2App(asset: string, swap:string) {
 
 	const deployInfo = {
 		AppCoinV2: v2app.address,
-		exchangeImpl: exchangeImpl.address,		exchangeProxy: exchange.address,
-		apiWeightTokenImpl: apiWeightTokenImpl.address,
+
+		exchangeImpl: exchangeImpl!.address,		exchangeProxy: exchange.address, exchangeBeacon: exchangeBeacon.address,
+
+		apiWeightTokenImpl: apiWeightTokenImpl.address, apiWeightTokenBeacon,
+
+		apiWeightFactoryBeacon: apiWeightFactoryBeacon.address,
 		apiWeightFactoryImpl: apiWeightFactoryImpl?.address, apiWeightFactoryProxy: apiWeightFactory.address,
-		vipCoinFactoryImpl: vipCoinFactoryImpl?.address, vipCoinFactoryProxy: vipCoinFactory.address,
+
+		vipCoinFactoryImpl: vipCoinFactoryImpl?.address, vipCoinFactoryProxy: vipCoinFactory.address, vipCoinFactoryBeacon: vipCoinFactoryBeacon.address,
+
 		cardTemplateImpl: cardTemplateImpl!.address, cardTrackerImpl: cardTrackerImpl!.address, cardShopImpl:cardShopImpl!.address,
 		cardTemplateBeacon:cardTemplateBeacon!.address, cardTrackerBeacon:cardTrackerBeacon!.address, cardShopBeacon:cardShopBeacon!.address,
+
 		carShopFactoryImpl:carShopFactoryImpl!.address, cardShopFactoryProxy:cardShopFactoryProxy!.address,
-		appImpl, appUpgradableBeacon: appUpBeacon.address,
-		appFactoryImpl: appFactoryImpl?.address, appFactoryProxy: appFactoryProxy?.address,
-		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address,
+		cardShopFactoryBeacon: cardShopFactoryBeacon.address,
+
+		appImpl:appImpl?.address, appUpgradableBeacon: appUpBeacon.address,
+
+		appFactoryImpl: appFactoryImpl?.address, appFactoryProxy: appFactoryProxy?.address, appFactoryBeacon:appFactoryBeacon.address,
+
+		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address, appRegFactoryBeacon:appRegFactoryBeacon.address,
 	}
 	const {chainId} = await ethers.provider.getNetwork()
 	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`), JSON.stringify(deployInfo, null, 4))
