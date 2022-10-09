@@ -14,8 +14,14 @@ interface IApp is IAccessControl{
         uint256 deferTimeSecs_,
         address owner, IAppRegistry appRegistry_) external;
     function setProps(
-        address cardShop_, string memory link_, string memory description_
+        address cardShop_, string memory link_, string memory description_, PaymentType paymentType_
     ) external;
+
+    function getApiWeightToken() external view returns(address);
+
+    enum PaymentType{
+        NONE, BILLING, SUBSCRIBE
+    }
 }
 
 interface IAppRegistry {

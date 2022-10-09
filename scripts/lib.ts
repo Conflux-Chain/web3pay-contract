@@ -124,7 +124,7 @@ export async function deployV2App(asset: string, swap:string) {
 
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
-	await appRegistry.create("app x", "appX", "my link", "my desc",0, 1, appOwner).then(waitTx);
+	await appRegistry.create("app x", "appX", "my link", "my desc", 1, 0, 1, appOwner).then(waitTx);
 	const [total, createdList] = await appRegistry.listByOwner(appOwner, 0, 100)
 	const lastApp = createdList[createdList.length - 1];
 	//
