@@ -3,7 +3,7 @@ import {
     deploy,
     DEPLOY_V2_INFO,
     deployV2App,
-    networkInfo,
+    networkInfo, sleep,
     timestampLog,
     tokensEthFork,
     tokensNet71,
@@ -22,6 +22,7 @@ import {
 } from "../typechain";
 import {ethers, upgrades} from "hardhat";
 import fs from "fs";
+import {verifyContract} from "./verify-scan";
 
 async function checkContract(addr:string) {
     console.log(`check contract at ${addr}`)
@@ -39,14 +40,23 @@ async function setCreatorRoleDisabled(chainId:any, flag: boolean) {
 async function main() {
     timestampLog()
     const  {signer, account:acc1, chainId} = await networkInfo()
-    await deployAllV2(acc1);
-    await setCreatorRoleDisabled(chainId, true);
+    // await deployAllV2(acc1);
+    // await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
-    const {appFactoryProxy, apiWeightFactoryProxy} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+    const {appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
     // await upgradeApiWeight(apiWeightFactoryProxy);
-    // await upgradeApp(appFactoryProxy);
+    // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
+    // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
+    // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeFactory()
+    // await createApp(appRegistryProxy, acc1);
+}
+async function createApp(appRegistryProxy:string, acc:string) {
+    console.log(`appRegistryProxy ${appRegistryProxy}`)
+    const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry;
+    const {transactionHash} = await registry.create("name 1", "symbol 1", "link 2", "desc 3", 2, 0, 5, acc).then(waitTx)
+    console.log(`create ok ${transactionHash}`)
 }
 async function upgradeFactory(name: string, proxyAddr: string) {
     const impl_ = await deploy(name, []);
@@ -64,13 +74,15 @@ async function upgradeBeaconInFactory(implName:string, argv:any[], factoryAddr:s
     const factory = await attach("ApiWeightTokenFactory", factoryAddr) as ApiWeightTokenFactory;
     const beacon = await factory.beacon()
     console.log(`beacon at ${beacon}`)
-    return upgrade(implName, argv, beacon);
+    return upgradeBeacon(implName, argv, beacon);
 }
-async function upgrade(name:string, argv:any[], beacon:string) {
+async function upgradeBeacon(name:string, argv:any[], beacon:string) {
     const impl = await deploy(name, argv);
     const beaconContract = await attach("UpgradeableBeacon", beacon) as UpgradeableBeacon;
     await beaconContract.upgradeTo(impl!.address);
     console.log(`upgraded ${name} ${impl!.address}`);
+    //await sleep(9_000);// wait scan syc
+    //await verifyContract(name, impl?.address!);
 }
 async function deployAllV2(acc1: string) {
     const {usdt, __router} = tokensNet71;
@@ -124,7 +136,7 @@ async function deployAllV2(acc1: string) {
     console.log(`buy card ok`)
     console.log(`vip level`, await tracker.getVipInfo(acc1).then(({expireAt, level})=>`level ${level} expireAt ${expireAt}`))
     // config
-    const apiConfig = await appX.apiWeightToken().then(res=>attach("ApiWeightToken", res)).then(res=>res as ApiWeightToken)
+    const apiConfig = await appX.getApiWeightToken().then(res=>attach("ApiWeightToken", res)).then(res=>res as ApiWeightToken)
     await apiConfig.setPendingSeconds(0).then(waitTx);
     console.log(`set setPendingSeconds ok`)
     await apiConfig.configResource({id: 0, op: 0, resourceId: "test-api-w", weight: 3}).then(waitTx);

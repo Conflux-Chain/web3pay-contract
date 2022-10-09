@@ -21,6 +21,8 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     uint256 public totalTakenProfit;
     string public link;
     string public description;
+    PaymentType public paymentType;// 0: none; 1: billing; 2: subscribe;
+
     /**
      * @dev For initialization in proxy constructor.
      */
@@ -35,11 +37,17 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
 
     // avoid stack too deep
     function setProps(
-        address cardShop_, string memory link_, string memory description_
-    ) public override onlyRole (Roles.CONFIG_ROLE) {
-        cardShop = cardShop_;
+        address cardShop_, string memory link_, string memory description_, PaymentType paymentType_
+    ) public override {
+        // initialize by factory, or setProps by config_role
+        require(cardShop == address(0) || hasRole(Roles.CONFIG_ROLE, msg.sender), "not permitted");
+        require(paymentType_ == PaymentType.BILLING || paymentType_ == PaymentType.SUBSCRIBE, "invalid payment type");
+        if (cardShop == address(0)) {
+            cardShop = cardShop_;
+        }
         link = link_;
         description = description_;
+        paymentType = paymentType_;
     }
 
     function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {

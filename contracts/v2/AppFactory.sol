@@ -46,6 +46,7 @@ contract AppFactory is Initializable {
         string memory symbol,
         string memory link,
         string memory description,
+        IApp.PaymentType paymentType_,
         uint256 deferTimeSecs,
         uint defaultApiWeight,
         address owner,
@@ -66,7 +67,7 @@ contract AppFactory is Initializable {
 
         // stack too deep error may occur if put two steps together.
         app.initialize(appCoin, vipCoin, apiWeightToken, deferTimeSecs, owner, appRegistry);
-        app.setProps(cardShop, link, description);
+        app.setProps(cardShop, link, description, paymentType_);
 
         emit Created(address(app), msg.sender, owner);
 

@@ -21,7 +21,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         uint256 createTime;
     }
 
-    event Created(address indexed app, address indexed operator, address indexed owner);
+    event Created(address indexed app, address indexed operator, address indexed owner, address apiWeightToken);
     event Removed(address indexed app, address indexed operator);
 
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
@@ -61,18 +61,19 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         string memory symbol,
         string memory link,
         string memory description,
+        IApp.PaymentType paymentType_,
         uint256 deferTimeSecs,
         uint256 defaultApiWeight,
         address owner
     ) public returns (address) {
         require(creatorRoleDisabled || hasRole(CREATOR_ROLE, _msgSender()), "AppRegistry: CREATOR_ROLE required");
 
-        address app = appFactory.create(name, symbol, link, description, deferTimeSecs, defaultApiWeight, owner, IAppRegistry(address(this)));
+        address app = appFactory.create(name, symbol, link, description, paymentType_, deferTimeSecs, defaultApiWeight, owner, IAppRegistry(address(this)));
 
         _apps.set(app, block.timestamp);
-        _owners[_msgSender()].set(app, block.timestamp);
+        _owners[owner].set(app, block.timestamp);
 
-        emit Created(app, _msgSender(), owner);
+        emit Created(app, _msgSender(), owner, IApp(app).getApiWeightToken());
 
         return app;
     }
