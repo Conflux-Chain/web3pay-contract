@@ -36,8 +36,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // avoid stack too deep
     function setProps(
         address cardShop_, string memory link_, string memory description_
-    ) public override {
-        require(address(cardShop) == address(0), "already set");
+    ) public override onlyRole (Roles.CONFIG_ROLE) {
         cardShop = cardShop_;
         link = link_;
         description = description_;
