@@ -17,9 +17,9 @@ contract AppFactory is Initializable {
     event Created(address indexed app, address indexed operator, address indexed owner);
 
     AppCoinV2 public appCoin;
-    VipCoinFactory public vipCoinFactory;
-    ApiWeightTokenFactory public apiWeightTokenFactory;
-    CardShopFactory public cardShopFactory;
+    IVipCoinFactory public vipCoinFactory;
+    IApiWeightTokenFactory public apiWeightTokenFactory;
+    ICardShopFactory public cardShopFactory;
     UpgradeableBeacon public beacon;
 
     constructor() {
@@ -28,44 +28,45 @@ contract AppFactory is Initializable {
 
     function initialize(
         AppCoinV2 appCoin_,
-        VipCoinFactory vipCoinFactory_,
-        ApiWeightTokenFactory apiWeightTokenFactory_,
-        CardShopFactory cardShopFactory_,
-        address beaconOwner
+        IVipCoinFactory vipCoinFactory_,
+        IApiWeightTokenFactory apiWeightTokenFactory_,
+        ICardShopFactory cardShopFactory_,
+        address beacon_
     ) public initializer {
         appCoin = appCoin_;
         vipCoinFactory = vipCoinFactory_;
         apiWeightTokenFactory = apiWeightTokenFactory_;
         cardShopFactory = cardShopFactory_;
 
-        App app = new App();
-        beacon = new UpgradeableBeacon(address(app));
-        beacon.transferOwnership(beaconOwner);
+        beacon = UpgradeableBeacon(beacon_);
     }
 
     function create(
         string memory name,
         string memory symbol,
-        string memory uri,
+        string memory link,
+        string memory description,
         uint256 deferTimeSecs,
         uint defaultApiWeight,
         address owner,
         IAppRegistry appRegistry
     ) public returns (address) {
-        App app = App(address(new BeaconProxy(address(beacon), "")));
+        IApp app = IApp(address(new BeaconProxy(address(beacon), "")));
 
-        IVipCoin vipCoin = IVipCoin(vipCoinFactory.create(name, symbol, uri, owner, address(app)));
+        IVipCoin vipCoin = IVipCoin(vipCoinFactory.create(name, symbol, "", owner, address(app)));
 
-        ApiWeightToken apiWeightToken = ApiWeightToken(apiWeightTokenFactory.create(
+        address apiWeightToken = apiWeightTokenFactory.create(
             app,
             string(abi.encodePacked(name, " api")),
             string(abi.encodePacked(symbol, "_api")),
-            uri, owner, defaultApiWeight
-        ));
+                "", owner, defaultApiWeight
+        );
 
-        CardShop cardShop = CardShop(cardShopFactory.create(app));
+        address cardShop = cardShopFactory.create(app);
 
-        app.initialize(appCoin, vipCoin, apiWeightToken, cardShop, deferTimeSecs, owner, appRegistry);
+        // stack too deep error may occur if put two steps together.
+        app.initialize(appCoin, vipCoin, apiWeightToken, deferTimeSecs, owner, appRegistry);
+        app.setProps(cardShop, link, description);
 
         emit Created(address(app), msg.sender, owner);
 
