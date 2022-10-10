@@ -9,6 +9,7 @@ interface IWithdrawHook {
 }
 interface IApp is IAccessControl{
     function getAppCoin() external returns (address);
+    function getVipCoin() external returns (address);
     function initialize(
         AppCoinV2 appCoin_, IVipCoin vipCoin_, address apiWeightToken_,
         uint256 deferTimeSecs_,
@@ -53,20 +54,20 @@ interface IVipCoin is IERC1155{
 }
 
 interface ICardTemplate {
+    // copying struct array is not supported, but copying primitive array is.
+    struct Props {
+        string[] keys;
+        string[] values;
+    }
     /** Card template */
     struct Template {
         uint id;
         string name;
         string description;
-        string icon;
-        uint duration;
         uint price;  // actual selling price
-        uint listPrice; // list price
-        uint   openSaleAt;
-        uint   closeSaleAt;
-        uint8  status;
-        uint   salesLimit;
-        uint8 level;
+        uint duration; // uint: second
+        uint giveawayDuration;
+        Props props;
     }
 
     function getTemplate(uint id) external view returns (Template memory);
@@ -74,19 +75,17 @@ interface ICardTemplate {
 interface ICards {
     struct Card {
         uint id;
-        uint templateId;
-        string name;
-        string description;
-        string icon;
         uint duration;
-        uint8 level;
+        address owner;
+        uint count;
+        ICardTemplate.Template template;
     }
-    function makeCard(address to, Card memory card, uint amount) external;
+    function makeCard(address to, uint tokenId, uint amount) external;
 }
 interface ICardTracker {
     struct VipInfo {
         uint expireAt;
-        uint8 level; // starts from 1
+        ICardTemplate.Props props;
     }
     function getVipInfo(address account) external view returns (VipInfo memory);
     function applyCard(address from, address to, ICards.Card memory card) external;

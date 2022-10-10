@@ -15,6 +15,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
     bytes32 public constant TAKE_PROFIT_ROLE = keccak256("TAKE_PROFIT_ROLE");
+    uint256 public constant TOKEN_ID_VIP = 3; // only one NFT for VIP
     // totalCharged fees produced by billing
     uint256 public totalCharged;
     address public cardShop;
@@ -97,9 +98,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         }
     }
 
-    function makeCard(address to, Card memory card, uint amount) external override {
+    function makeCard(address to, uint tokenId, uint amount) external override {
         // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
-        require(card.id > TOKEN_ID_AIRDROP, "invalid token id");
-        vipCoin.mint(to, card.id, amount, "");
+        require(tokenId > TOKEN_ID_AIRDROP, "invalid token id");
+        vipCoin.mint(to, tokenId, amount, "");
     }
 }

@@ -12,7 +12,7 @@ import {
 import {formatEther, formatUnits, parseEther} from "ethers/lib/utils";
 import {
     ApiWeightToken,
-    ApiWeightTokenFactory,
+    ApiWeightTokenFactory, App,
     AppCoinV2, AppRegistry,
     CardShop,
     CardTemplate, CardTracker,
@@ -23,6 +23,7 @@ import {
 import {ethers, upgrades} from "hardhat";
 import fs from "fs";
 import {verifyContract} from "./verify-scan";
+import {BigNumber} from "ethers";
 
 async function checkContract(addr:string) {
     console.log(`check contract at ${addr}`)
@@ -37,6 +38,15 @@ async function setCreatorRoleDisabled(chainId:any, flag: boolean) {
     console.log(`ok `, transactionHash)
 }
 
+async function testVipCardOfApp(appRegistryProxy:string, acc1: string) {
+    await attach("AppRegistry", appRegistryProxy).then(res => res as AppRegistry)
+        // .then(reg=>createApp(reg.address, acc1).then(()=>reg))
+        .then(reg => reg.list(0, 99))
+        // .then(appList=>{console.log(`app list`, appList); return appList;})
+        .then(arr => arr[1]).then(arr => arr[arr.length - 1].addr).then(addr => attach("App", addr)).then(res => res as App)
+        .then(app => vipCardTest(app, acc1))
+}
+
 async function main() {
     timestampLog()
     const  {signer, account:acc1, chainId} = await networkInfo()
@@ -44,12 +54,18 @@ async function main() {
     // await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
-    const {appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon} = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
-    // await upgradeApiWeight(apiWeightFactoryProxy);
+    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon,
+        appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon
+    } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
+
+    // await testVipCardOfApp(appRegistryProxy, acc1);
+
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
     // await upgradeBeacon("App", [], appUpgradableBeacon);
-    // await upgradeFactory()
+    // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
+    // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
+    // await upgradeBeacon("CardShop", [], cardShopBeacon);
     // await createApp(appRegistryProxy, acc1);
 }
 async function createApp(appRegistryProxy:string, acc:string) {
@@ -81,27 +97,19 @@ async function upgradeBeacon(name:string, argv:any[], beacon:string) {
     const beaconContract = await attach("UpgradeableBeacon", beacon) as UpgradeableBeacon;
     await beaconContract.upgradeTo(impl!.address);
     console.log(`upgraded ${name} ${impl!.address}`);
-    //await sleep(9_000);// wait scan syc
-    //await verifyContract(name, impl?.address!);
+    setTimeout(()=>{
+        verifyContract(name, impl?.address!);
+    }, 10_000);
 }
-async function deployAllV2(acc1: string) {
-    const {usdt, __router} = tokensNet71;
-    const {v2app, exchange, appX, assetToken} = await deployV2App(usdt, __router)
-    // const {v2app, exchange, vipCoin, appX} = await deployV2App(tokensEthFork.usdt, tokensEthFork.__router)
-    console.log(`deploy v2 ok`)
-    const acAmount = 10000//parseEther("1")
-    const inAmt = await exchange.previewDepositETH(acAmount);
-    await exchange.depositETH(acAmount * 3, acc1, {value: inAmt.mul(3)}).then(waitTx).then(({transactionHash})=>{
-        console.log(`deposit eth tx hash ${transactionHash}`)
-    })
-    const balance = await v2app.balanceOf(acc1);
-    let decimals = await v2app.decimals();
-    console.log(`app balance is ${balance} ${formatUnits(balance, decimals)}, decimals ${decimals}`)
+
+async function depositWithdrawETH(v2app: AppCoinV2, exchange: SwapExchange, acAmount: number, acc1: string) {
     await v2app.approve(exchange.address, acAmount).then(waitTx)
-    console.log(`allowance`, await v2app.allowance(acc1, exchange.address))
+    console.log(`allowance for exchange before withdrawETH`, await v2app.allowance(acc1, exchange.address))
     const {transactionHash} = await exchange.withdrawETH(acAmount, 0, acc1).then(waitTx);
-    console.log(`withdraw transactionHash ${transactionHash}`)
-    // deposit to appX through app coin
+    console.log(`withdraw eth transactionHash ${transactionHash}`)
+}
+
+async function depositWithdrawBaseToken(v2app: AppCoinV2, appX: App, acAmount: number, acc1: string, exchange: SwapExchange, inAmt: BigNumber) {
     await v2app.approve(appX.address, acAmount).then(waitTx)
     console.log(`allowance appx`, await v2app.allowance(acc1, appX.address), "app coin", await appX.getAppCoin())
     await appX.deposit(acAmount, acc1).then(waitTx)
@@ -110,31 +118,64 @@ async function deployAllV2(acc1: string) {
     await exchange.depositAppETH(appX.address, acAmount, acc1, {value: inAmt.mul(2)}).then(waitTx);
     // withdraw base asset
     await appX.withdraw(acc1, true).then(waitTx);
+}
 
+async function forceWithdrawEth(exchange: SwapExchange, appX: App, acAmount: number, acc1: string, inAmt: BigNumber) {
     await exchange.depositAppETH(appX.address, acAmount, acc1, {value: inAmt.mul(2)}).then(waitTx);
     // withdraw
     await appX.requestForceWithdraw().then(waitTx)
     console.log(`requestForceWithdraw ok`)
     await appX.forceWithdrawEth(acc1, exchange.address, 0).then(waitTx);
     console.log(`app x balance after withdraw ${await appX.balanceOf(acc1)}`)
+}
+
+async function vipCardTest(appX: App, acc1: string) {
+    console.log(`app is ${appX.address}`)
+    const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
+    const template = await attach("CardTemplate", await shop.template()) as CardTemplate;
+    const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
+    await template.config({
+        description: "", duration: 1, id: 0, giveawayDuration: 2,// will auto generate
+        name: "test card", price: 4, props: {keys: ["level"], values: ["1"]}
+    }).then(waitTx)
+    const templateId = await template.nextId().then(res => res.sub(1));
+    console.log(`config card template ok, id ${templateId} props `, await template.getTemplate(templateId).then(res => res.props));
+    const {transactionHash} = await shop.buy(acc1, templateId, 1).then(waitTx)
+    console.log(`buy card ok ${transactionHash}`)
+    console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
+}
+
+async function deployAllV2(acc1: string) {
+    const {usdt, __router} = tokensNet71;
+    const {v2app, exchange, appX, assetToken} = await deployV2App(usdt, __router)
+    // const {v2app, exchange, vipCoin, appX} = await deployV2App(tokensEthFork.usdt, tokensEthFork.__router)
+    console.log(`deploy v2 ok`)
+    const acAmount = 100000//parseEther("1")
+    const inAmt = await exchange.previewDepositETH(acAmount);
+    await exchange.depositETH(acAmount * 3, acc1, {value: inAmt.mul(3)}).then(waitTx).then(({transactionHash})=>{
+        console.log(`deposit eth tx hash ${transactionHash}`)
+    })
+    const balance = await v2app.balanceOf(acc1);
+    let decimals = await v2app.decimals();
+    console.log(`app balance is ${balance} ${formatUnits(balance, decimals)}, decimals ${decimals}`)
+    await depositWithdrawETH(v2app, exchange, acAmount, acc1).catch(err=>{
+        console.log(`depositWithdrawETH fail.`, err)
+    });
+    // deposit to appX through app coin
+    await depositWithdrawBaseToken(v2app, appX, acAmount, acc1, exchange, inAmt).catch(err=>{
+        console.log(`depositWithdrawBaseToken fail.`, err)
+    });
+
+    await forceWithdrawEth(exchange, appX, acAmount, acc1, inAmt).catch(err=>{
+        console.log(`forceWithdrawEth fail.`, err)
+    });
 
     console.log(`base asset balance ${await assetToken.balanceOf(acc1)}`)
     await assetToken.approve(appX.address, acAmount).then(waitTx)
     await appX.depositAsset(acAmount, acc1).then(waitTx)
 
     // card
-    const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
-    const template = await attach("CardTemplate", await shop.template()) as CardTemplate;
-    const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
-    await template.config({
-        closeSaleAt: 0, description: "", duration: 1, icon: "/favicon.ico", id: 0,// will auto generate
-        level: 1, listPrice: 2, name: "test card", openSaleAt: 3, price: 4, salesLimit: 5, status: 1
-    }).then(waitTx)
-    const templateId = await template.nextId().then(res=>res.sub(1));
-    console.log(`config card template ok, id ${templateId} level `, await template.getTemplate(templateId).then(res=>res.level));
-    await shop.buy(acc1, templateId).then(waitTx)
-    console.log(`buy card ok`)
-    console.log(`vip level`, await tracker.getVipInfo(acc1).then(({expireAt, level})=>`level ${level} expireAt ${expireAt}`))
+    await vipCardTest(appX, acc1);
     // config
     const apiConfig = await appX.getApiWeightToken().then(res=>attach("ApiWeightToken", res)).then(res=>res as ApiWeightToken)
     await apiConfig.setPendingSeconds(0).then(waitTx);

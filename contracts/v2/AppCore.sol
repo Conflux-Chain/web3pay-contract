@@ -12,11 +12,14 @@ abstract contract AppCore is Initializable, AccessControlEnumerable, IApp {
     uint256 public constant TOKEN_ID_COIN = 0;
 
     AppCoinV2 internal appCoin;
-    IVipCoin public vipCoin;
+    IVipCoin internal vipCoin;
     address internal apiWeightToken;
 
     constructor() {
         _disableInitializers();
+    }
+    function getVipCoin() public view override returns(address) {
+        return address(vipCoin);
     }
     function getAppCoin() public view override returns(address) {
         return address(appCoin);

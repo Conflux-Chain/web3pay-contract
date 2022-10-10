@@ -15,7 +15,7 @@ contract CardShop {
     ICards public instance;
     ICardTracker public tracker;
 
-    //TODO add query functions
+    uint public nextCardId; //starts from 0
     //save card information.
     mapping(uint=>ICards.Card) cards;
 
@@ -27,68 +27,47 @@ contract CardShop {
         instance = instance_;
         tracker = tracker_;
         belongsToApp = belongsTo_;
+        nextCardId = 0;
     }
 
-    function buy(address receiver, uint templateId) public {
+    function buy(address receiver, uint templateId, uint count) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
         ICardTemplate.Template memory template_ = template.getTemplate(templateId);
         //TODO complete payment
         require(template_.id > 0, "template not found");
-        _callMakeCard(receiver, template_);
+        _callMakeCard(receiver, template_, count);
     }
 
-    function giveCard(address receiver, uint templateId) public {
+    function giveCardBatch(address[] memory receiverArr, uint[] memory countArr, uint templateId) public {
         require(belongsToApp.hasRole(Roles.AIRDROP_ROLE, msg.sender), "");
         ICardTemplate.Template memory template_ = template.getTemplate(templateId);
         require(template_.id > 0, "template not found");
-        uint cardId = _callMakeCard(receiver, template_);
-        emit GAVEN_CARD(msg.sender, receiver, cardId);
+        require(receiverArr.length == countArr.length, "invalid length");
+        for(uint i=0; i<receiverArr.length; i++){
+            uint cardId = _callMakeCard(receiverArr[i], template_, countArr[i]);
+            emit GAVEN_CARD(msg.sender, receiverArr[i], cardId);
+        }
     }
 
     function getCard(uint id) public view returns (ICards.Card memory){
         return cards[id];
     }
 
-    function _callMakeCard(address to, ICardTemplate.Template memory template_) internal returns (uint){
-        uint cardId = template_.id; //TODO add algorithm
+    function _callMakeCard(address to, ICardTemplate.Template memory template_, uint count) internal returns (uint){
         ICards.Card memory card = ICards.Card(
-            cardId,
-            template_.id,
-            template_.name,
-            template_.description,
-            template_.icon,
-            template_.duration,
-            template_.level
+            nextCardId,
+            (template_.duration + template_.giveawayDuration) * count, // total duration
+            to, count,
+            template_
         );
-        //TODO buy more than 1 at once
-        instance.makeCard(to, card, 1);
-        cards[cardId] = card;
-        tracker.applyCard(address(0), to, card);
-        return cardId;
-    }
-
-    function upgradeVip(address account, uint templateId) public {
-        uint fee;
-        uint addedDuration;
-        (fee, addedDuration) = getUpgradeFee(account, templateId);
-        ICardTemplate.Template memory template_ = template.getTemplate(templateId);
-        //TODO complete payment
-        template_.duration = addedDuration;
-        _callMakeCard(account, template_);
-    }
-
-    /** Calculate how much a membership upgrade will cost  */
-    function getUpgradeFee(address account, uint templateId) public view returns (uint price, uint addedDuration){
-        ICardTemplate.Template memory nextTemplate = template.getTemplate(templateId);
-        ICardTracker.VipInfo memory curVipInfo = tracker.getVipInfo(account);
-        if (curVipInfo.level == 0 || curVipInfo.expireAt < block.timestamp) {
-            // not at valid vip level, treat as buy nextTemplate directly.
-            return (nextTemplate.price, nextTemplate.duration);
+        nextCardId ++;
+        uint TOKEN_ID_VIP = 3; // defined in App.sol. Can not access constant variable in interface.
+        uint vipTokenBalance = IVipCoin(belongsToApp.getVipCoin()).balanceOf(to, TOKEN_ID_VIP);
+        if (vipTokenBalance == 0) { // only create one VIP NFT for each account.
+            instance.makeCard(to, TOKEN_ID_VIP, 1);
         }
-        require(curVipInfo.level + 1 == nextTemplate.level, "discontinuous" );
-        uint partialDuration = curVipInfo.expireAt - block.timestamp;
-        require( partialDuration <= nextTemplate.duration, "exceeds duration");
-
-        return (nextTemplate.price * partialDuration / nextTemplate.duration, 0);
+        cards[card.id] = card;
+        tracker.applyCard(address(0), to, card);
+        return card.id;
     }
 }

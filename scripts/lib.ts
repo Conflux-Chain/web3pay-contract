@@ -129,7 +129,7 @@ export async function deployV2App(asset: string, swap:string) {
 	const lastApp = createdList[createdList.length - 1];
 	//
 	const appX = await attach("App", lastApp.addr) as App
-	const vipCoinAddr = await appX.vipCoin()
+	const vipCoinAddr = await appX.getVipCoin()
 	const vipCoin = await attach("VipCoin", vipCoinAddr) as VipCoin;
 	const assetToken = await attach("ERC20", asset) as ERC20;
 
