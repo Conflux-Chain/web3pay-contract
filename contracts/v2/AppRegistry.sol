@@ -21,7 +21,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         uint256 createTime;
     }
 
-    event Created(address indexed app, address indexed operator, address indexed owner, address apiWeightToken);
+    event Created(address indexed app, address indexed operator, address indexed owner, address apiWeightToken, address vipCoin);
     event Removed(address indexed app, address indexed operator);
 
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
@@ -73,7 +73,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         _apps.set(app, block.timestamp);
         _owners[owner].set(app, block.timestamp);
 
-        emit Created(app, _msgSender(), owner, IApp(app).getApiWeightToken());
+        emit Created(app, _msgSender(), owner, IApp(app).getApiWeightToken(), IApp(app).getVipCoin());
 
         return app;
     }
