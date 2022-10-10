@@ -5,7 +5,7 @@ import "./interfaces.sol";
 
 /** Track card mint, calculate vip info. */
 contract CardTracker is ICardTracker{
-    event VipChanged(address indexed account, uint expireAt, uint16 level);
+    event VipChanged(address indexed account, uint expireAt);
     //Contract that could call to this one.
     address _eventSource;
 
@@ -18,7 +18,7 @@ contract CardTracker is ICardTracker{
         _eventSource = eventSource;
     }
 
-    //TODO add level logic.
+    // There is no upgrade logic for now, just override props and extend the expiration time.
     function applyCard(address from, address to, ICards.Card memory card) external override {
         require(msg.sender == _eventSource, "unauthorised");
 
@@ -27,11 +27,12 @@ contract CardTracker is ICardTracker{
         VipInfo storage info = _vipMap[to];
         if (info.expireAt < block.timestamp) {
             info.expireAt = block.timestamp + card.duration;
-            info.level = 1;
         } else {
             info.expireAt += card.duration;
         }
-        emit VipChanged(to, info.expireAt, info.level);
+        // override props
+        info.props = card.template.props;
+        emit VipChanged(to, info.expireAt);
     }
 
     function getVipInfo(address account) public override view returns (VipInfo memory) {
