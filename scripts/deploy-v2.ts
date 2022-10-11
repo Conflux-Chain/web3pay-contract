@@ -1,8 +1,9 @@
 import {
+    approveERC20,
     attach,
     deploy,
     DEPLOY_V2_INFO,
-    deployV2App,
+    deployV2App, mintERC20,
     networkInfo, sleep,
     timestampLog,
     tokensEthFork,
@@ -58,14 +59,14 @@ async function main() {
         appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
 
-    // await testVipCardOfApp(appRegistryProxy, acc1);
-
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
     // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
+    // await testVipCardOfApp(appRegistryProxy, acc1);
+
     // await createApp(appRegistryProxy, acc1);
 }
 async function createApp(appRegistryProxy:string, acc:string) {
@@ -134,13 +135,20 @@ async function vipCardTest(appX: App, acc1: string) {
     const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
     const template = await attach("CardTemplate", await shop.template()) as CardTemplate;
     const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
-    await template.config({
+    let tpl = {
         description: "", duration: 1, id: 0, giveawayDuration: 2,// will auto generate
         name: "test card", price: 4, props: {keys: ["level"], values: ["1"]}
-    }).then(waitTx)
+    };
+    await template.config(tpl).then(waitTx)
     const templateId = await template.nextId().then(res => res.sub(1));
     console.log(`config card template ok, id ${templateId} props `, await template.getTemplate(templateId).then(res => res.props));
-    const {transactionHash} = await shop.buy(acc1, templateId, 1).then(waitTx)
+    //
+    const asset = await appX.getAppCoin().then(appCoin=>attach("AppCoinV2", appCoin)).then(c=>c as AppCoinV2).then(ap=>ap.asset());
+    let buyCount = 3;
+    let totalPrice = (tpl.price * buyCount).toString();
+    await mintERC20(asset, acc1, totalPrice)
+    await approveERC20(asset, shop.address, totalPrice)
+    const {transactionHash} = await shop.buyWithAsset(acc1, templateId, buyCount).then(waitTx)
     console.log(`buy card ok ${transactionHash}`)
     console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
 }

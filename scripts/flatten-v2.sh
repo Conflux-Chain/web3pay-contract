@@ -1,3 +1,9 @@
+if [[ -n "$1" ]]
+then
+  name=$1
+  hardhat flatten contracts/v2/$name.sol > flatten/$name.txt
+  exit
+fi
 declare -a arr=("AppCoinV2" "SwapExchange" "ApiWeightToken" "ApiWeightTokenFactory" "VipCoin" "VipCoinFactory" "App" "AppRegistry" "AppFactory" "CardShop" "CardTemplate" "CardTracker" "CardShopFactory")
 
 ## now loop through the above array

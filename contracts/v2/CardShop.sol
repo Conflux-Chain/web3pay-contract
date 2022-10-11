@@ -30,11 +30,22 @@ contract CardShop {
         nextCardId = 0;
     }
 
-    function buy(address receiver, uint templateId, uint count) public {
+    function buyWithAsset(address receiver, uint templateId, uint count) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
         ICardTemplate.Template memory template_ = template.getTemplate(templateId);
-        //TODO complete payment
         require(template_.id > 0, "template not found");
+
+        uint totalPrice = template_.price * count;
+        IERC4626 erc4626 = IERC4626(belongsToApp.getAppCoin());
+        uint256 assets = erc4626.previewMint(totalPrice);
+
+        // transfer asset from msg.sender to this
+        SafeERC20.safeTransferFrom(IERC20(erc4626.asset()), msg.sender, address(this), assets);
+        // approve asset to app coin
+        SafeERC20.safeApprove(IERC20(erc4626.asset()), address(erc4626), assets);
+        // deposit for belongsToApp
+        erc4626.deposit(assets, address(belongsToApp));
+
         _callMakeCard(receiver, template_, count);
     }
 
