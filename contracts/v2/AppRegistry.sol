@@ -35,6 +35,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
     mapping(address => EnumerableMap.AddressToUintMap) private _owners;
     // user address => set(app address)
     mapping(address => EnumerableSet.AddressSet) private _users;
+    ISwapExchange internal exchanger;
 
     // TODO supports to transfer app owner?
 
@@ -42,15 +43,24 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         _disableInitializers();
     }
 
-    function initialize(AppFactory appFactory_) public initializer {
+    function initialize(AppFactory appFactory_, ISwapExchange exchanger_) public initializer {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CREATOR_ROLE, _msgSender());
 
+        exchanger = exchanger_;
         appFactory = appFactory_;
+    }
+    function setExchanger(ISwapExchange exchanger_) public {
+        require(address(exchanger) == address(0), "already set");
+        exchanger = exchanger_;
     }
 
     function setCreatorRoleDisabled(bool disabled) public onlyRole(DEFAULT_ADMIN_ROLE) {
         creatorRoleDisabled = disabled;
+    }
+
+    function getExchanger() external view returns (ISwapExchange) {
+        return exchanger;
     }
 
     /**

@@ -26,6 +26,9 @@ export const tokensEthFork = {
 	usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
 	__router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
 }
+export async function attachT<T>(name:string, to:string) : Promise<T>{
+	return attach(name, to).then(res=>res as any as T)
+}
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)
@@ -120,7 +123,8 @@ export async function deployV2App(asset: string, swap:string) {
 		[v2app.address, vipCoinFactory.address, apiWeightFactory.address, cardShopFactoryProxy?.address, appBeacon.address])
 	const appUpBeacon = appBeacon;
 
-	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} = await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address])
+	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} =
+		await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address, exchange.address])
 
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;

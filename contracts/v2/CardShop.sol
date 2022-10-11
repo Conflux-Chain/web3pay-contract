@@ -30,6 +30,28 @@ contract CardShop {
         nextCardId = 0;
     }
 
+    /**
+     * call exchanger.previewDepositETH(totalPrice) to estimate how munch eth is needed.
+     */
+    function buyWithEth(address receiver, uint templateId, uint count) public payable {
+        ICardTemplate.Template memory template_ = template.getTemplate(templateId);
+        require(template_.id > 0, "template not found");
+
+        uint totalPrice = template_.price * count;
+        ISwapExchange exchanger = IAppAccessor(address(belongsToApp)).appRegistry().getExchanger();
+        uint needEth = exchanger.previewDepositETH(totalPrice);
+        require(msg.value >= needEth, "insufficient input");
+
+        exchanger.depositETH{value: needEth}(totalPrice, address(belongsToApp));
+
+        _callMakeCard(receiver, template_, count);
+
+        uint dust = msg.value - needEth;
+        if (dust > 0) {
+            (bool success,) = msg.sender.call{value : dust}(new bytes(0));
+            require(success, 'CardShop: transfer ETH failed');
+        }
+    }
     function buyWithAsset(address receiver, uint templateId, uint count) public {
         //console.log("templateId: %s , template c %s", templateId, address(template));
         ICardTemplate.Template memory template_ = template.getTemplate(templateId);
