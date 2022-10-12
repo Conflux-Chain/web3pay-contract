@@ -4,6 +4,10 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./AppCoinV2.sol";
 
+interface ISwapExchange {
+    function previewDepositETH(uint256 amount) external view returns (uint256);
+    function depositETH(uint256 amount, address receiver) external payable;
+}
 interface IWithdrawHook {
     function withdrawEth(address receiver, uint256 ethMin) external;
 }
@@ -27,10 +31,14 @@ interface IApp is IAccessControl{
 
 interface IAppRegistry {
     function addUser(address user) external returns (bool);
+    function getExchanger() external view returns (ISwapExchange);
 }
 interface IVipCoinDeposit {
     function balanceOf(address account) external view returns (uint256, uint256);
     function deposit(uint256 amount, address receiver) external;
+}
+interface IAppAccessor {
+    function appRegistry() external returns (IAppRegistry);
 }
 interface IVipCoinWithdraw {
     function burn(

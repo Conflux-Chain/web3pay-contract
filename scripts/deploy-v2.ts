@@ -1,6 +1,6 @@
 import {
     approveERC20,
-    attach,
+    attach, attachT,
     deploy,
     DEPLOY_V2_INFO,
     deployV2App, mintERC20,
@@ -55,11 +55,12 @@ async function main() {
     // await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
-    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon,
+    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy,
         appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
 
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
+    // attachT<AppRegistry>("AppRegistry", appRegistryProxy).then(res=>res.setExchanger(exchangeProxy)).then(waitTx)
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
     // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
@@ -150,6 +151,10 @@ async function vipCardTest(appX: App, acc1: string) {
     await approveERC20(asset, shop.address, totalPrice)
     const {transactionHash} = await shop.buyWithAsset(acc1, templateId, buyCount).then(waitTx)
     console.log(`buy card ok ${transactionHash}`)
+    console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
+    // buy with eth
+    const {transactionHashEth} = await shop.buyWithEth(acc1, templateId, buyCount, {value: tpl.price * buyCount + 12345 }).then(waitTx)
+    console.log(`buy with eth ok ${transactionHashEth}`)
     console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
 }
 
