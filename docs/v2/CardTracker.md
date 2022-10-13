@@ -11,27 +11,30 @@ Track card mint, calculate vip info.
 
 
 
+### `initialize(address eventSource)` (public)
+
+
+
+
+
 ### `applyCard(address from, address to, struct ICards.Card card)` (external)
 
 
 
 
 
-
-### `VipChanged(address account, uint256 expireAt, uint16 level)`
-
+### `getVipInfo(address account) → struct ICardTracker.VipInfo` (public)
 
 
 
 
 
-### `VipInfo`
+
+### `VipChanged(address account, uint256 expireAt)`
 
 
-uint256 expireAt
 
 
-uint8 level
 
 
 

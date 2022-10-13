@@ -1,7 +1,7 @@
 /**
  * Cross space, from core space call to evm space.
  */
-import {Conflux, Drip, format} from "js-conflux-sdk"
+import {address, Conflux, Drip, format} from "js-conflux-sdk"
 const addressUtil = require('js-conflux-sdk/src/util/address');
 import {getDeadline, tokensNet71} from "./lib";
 import {ethers} from "hardhat";
@@ -17,6 +17,7 @@ async function main() {
 	const cfx = new Conflux({url})
 	await cfx.updateNetworkId();
 	const {address:acc1} = cfx.wallet.addPrivateKey(pk)
+	await claimCfx(cfx, acc1);
 	const mappedAddr = addressUtil.cfxMappedEVMSpaceAddress(acc1)
 	const balance = await cfx.getBalance(acc1).then(res=>new Drip(res).toCFX())
 	console.log(`network ${await cfx.getStatus().then(res=>res.networkId)} account ${acc1} balance ${balance} CFX`)
@@ -41,6 +42,39 @@ async function main() {
 	console.log(`depositNativeValue done.`, transactionHash)
 }
 
+function buildFaucetContract(cfx: Conflux) {
+	const abi = [
+		{"inputs": [], "name": "claimCfx", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
+		{
+			"inputs": [{"internalType": "address", "name": "tokenContractAddress", "type": "address"}],
+			"name": "claimToken",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+	]
+	const faucet = cfx.Contract({abi, address: 'cfxtest:acejjfa80vj06j2jgtz9pngkv423fhkuxj786kjr61'})
+	return faucet;
+}
+
+export async function claimCfx(cfx: Conflux, account: string) {
+	const faucet = buildFaucetContract(cfx);
+	return faucet.claimCfx().sendTransaction({
+		from: account,
+	// @ts-ignore
+	}).executed().then(res => res.transactionHash).then(hash => {
+		console.log(`claim cfx ${hash}`)
+	})
+}
+export async function claimToken(cfx: Conflux, account: string, token = "cfxtest:acepe88unk7fvs18436178up33hb4zkuf62a9dk1gv") {
+	const faucet = buildFaucetContract(cfx);
+	return faucet.claimToken(token).sendTransaction({
+		from: account
+	// @ts-ignore
+	}).executed().then(res=>res.transactionHash).then(hash=>{
+		console.log(`claim token ${hash}`)
+	})
+}
 if (module == require.main) {
 	main().then()
 }

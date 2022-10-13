@@ -5,7 +5,13 @@
 AppRegistry is used to manage all registered applications.
 
 
-### `initialize(contract AppFactory appFactory_)` (public)
+### `initialize(contract AppFactory appFactory_, contract ISwapExchange exchanger_)` (public)
+
+
+
+
+
+### `setExchanger(contract ISwapExchange exchanger_)` (public)
 
 
 
@@ -17,7 +23,13 @@ AppRegistry is used to manage all registered applications.
 
 
 
-### `create(string name, string symbol, string uri, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner) → address` (public)
+### `getExchanger() → contract ISwapExchange` (external)
+
+
+
+
+
+### `create(string name, string symbol, string link, string description, enum IApp.PaymentType paymentType_, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner) → address` (public)
 
 
 
@@ -66,7 +78,7 @@ Removes specified `app` by owner.
 
 
 
-### `Created(address app, address operator, address owner)`
+### `Created(address app, address operator, address owner, address apiWeightToken, address vipCoin)`
 
 
 

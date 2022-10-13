@@ -45,7 +45,7 @@ abstract contract VipCoinDeposit is IVipCoinDeposit, AppCore, ReentrancyGuard {
     }
 
     /**
-     * @dev Deposits `amount` of asset coins for `receiver`.
+     * @dev Deposits `amount` of asset coins for `receiver`. Must approve Asset to this first.
      */
     function depositAsset(uint256 amount, address receiver) public nonReentrant {
         // user should approve to this first

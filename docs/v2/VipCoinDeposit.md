@@ -29,7 +29,7 @@ Deposits `amount` of VIP coins for `receiver`.
 
 
 
-Deposits `amount` of asset coins for `receiver`.
+Deposits `amount` of asset coins for `receiver`. Must approve Asset to this first.
 
 ### `airdrop(address receiver, uint256 amount)` (public)
 

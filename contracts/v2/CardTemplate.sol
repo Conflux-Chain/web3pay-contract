@@ -18,11 +18,12 @@ contract CardTemplate is ICardTemplate{
     IApp public belongsToApp;
     uint public nextId;
     mapping(uint=>Template) templates;
+    uint private constant START_ID = 10001;
 
     function initialize(IApp belongsTo_) public {
         require(address(belongsToApp) == address(0), "already initialized");
         belongsToApp = belongsTo_;
-        nextId = 10001;
+        nextId = START_ID;
     }
 
     function getTemplate(uint id) public override view returns (Template memory t) {
@@ -39,5 +40,20 @@ contract CardTemplate is ICardTemplate{
             revert("invalid id");
         }
         templates[template.id] = template;
+    }
+
+    /** @dev List templates. */
+    function list(uint offset, uint limit) public view returns (Template[] memory, uint total){
+        offset += START_ID;
+        require(offset <= nextId, 'invalid offset');
+        if (offset + limit >= nextId) {
+            limit = nextId - offset;
+        }
+        Template[] memory arr = new Template[](limit);
+        for(uint i=0; i<limit; i++) {
+            arr[i] = templates[offset];
+            offset += 1;
+        }
+        return (arr, nextId);
     }
 }

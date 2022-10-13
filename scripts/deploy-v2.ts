@@ -17,7 +17,7 @@ import {
     AppCoinV2, AppRegistry,
     CardShop,
     CardTemplate, CardTracker,
-    ERC1967Proxy,
+    ERC1967Proxy, ERC20,
     SwapExchange,
     UpgradeableBeacon
 } from "../typechain";
@@ -67,8 +67,13 @@ async function main() {
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
     // await testVipCardOfApp(appRegistryProxy, acc1);
-
+    // await testDeposit('', acc1);
     // await createApp(appRegistryProxy, acc1);
+}
+async function testDeposit(appAddr:string, account: string) {
+    const appX = await attachT<App>("App", appAddr);
+    const u = await getAsset(appX);
+    await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, 3)
 }
 async function createApp(appRegistryProxy:string, acc:string) {
     console.log(`appRegistryProxy ${appRegistryProxy}`)
@@ -131,6 +136,11 @@ async function forceWithdrawEth(exchange: SwapExchange, appX: App, acAmount: num
     console.log(`app x balance after withdraw ${await appX.balanceOf(acc1)}`)
 }
 
+async function getAsset(appX: App) {
+    const asset = await appX.getAppCoin().then(appCoin => attach("AppCoinV2", appCoin)).then(c => c as AppCoinV2).then(ap => ap.asset());
+    return asset;
+}
+
 async function vipCardTest(appX: App, acc1: string) {
     console.log(`app is ${appX.address}`)
     const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
@@ -144,7 +154,7 @@ async function vipCardTest(appX: App, acc1: string) {
     const templateId = await template.nextId().then(res => res.sub(1));
     console.log(`config card template ok, id ${templateId} props `, await template.getTemplate(templateId).then(res => res.props));
     //
-    const asset = await appX.getAppCoin().then(appCoin=>attach("AppCoinV2", appCoin)).then(c=>c as AppCoinV2).then(ap=>ap.asset());
+    const asset = await getAsset(appX);
     let buyCount = 3;
     let totalPrice = (tpl.price * buyCount).toString();
     await mintERC20(asset, acc1, totalPrice)
@@ -156,6 +166,13 @@ async function vipCardTest(appX: App, acc1: string) {
     const {transactionHashEth} = await shop.buyWithEth(acc1, templateId, buyCount, {value: tpl.price * buyCount + 12345 }).then(waitTx)
     console.log(`buy with eth ok ${transactionHashEth}`)
     console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
+}
+
+async function depositAsset(assetToken: ERC20, acc1: string, appX: App, acAmount: number) {
+    console.log(`base asset balance ${await assetToken.balanceOf(acc1)}`)
+    await assetToken.approve(appX.address, acAmount).then(waitTx)
+    const {transactionHash} = await appX.depositAsset(acAmount, acc1).then(waitTx)
+    console.log(`deposit asset ok ${transactionHash}`)
 }
 
 async function deployAllV2(acc1: string) {
@@ -183,9 +200,7 @@ async function deployAllV2(acc1: string) {
         console.log(`forceWithdrawEth fail.`, err)
     });
 
-    console.log(`base asset balance ${await assetToken.balanceOf(acc1)}`)
-    await assetToken.approve(appX.address, acAmount).then(waitTx)
-    await appX.depositAsset(acAmount, acc1).then(waitTx)
+    await depositAsset(assetToken, acc1, appX, acAmount);
 
     // card
     await vipCardTest(appX, acc1);
