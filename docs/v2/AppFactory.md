@@ -5,13 +5,13 @@
 
 
 
-### `initialize(contract AppCoinV2 appCoin_, contract VipCoinFactory vipCoinFactory_, contract ApiWeightTokenFactory apiWeightTokenFactory_, address beaconOwner)` (public)
+### `initialize(contract AppCoinV2 appCoin_, contract IVipCoinFactory vipCoinFactory_, contract IApiWeightTokenFactory apiWeightTokenFactory_, contract ICardShopFactory cardShopFactory_, address beacon_)` (public)
 
 
 
 
 
-### `create(string name, string symbol, string uri, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner, contract IAppRegistry appRegistry) → address` (public)
+### `create(string name, string symbol, string link, string description, enum IApp.PaymentType paymentType_, uint256 deferTimeSecs, uint256 defaultApiWeight, address owner, contract IAppRegistry appRegistry) → address` (public)
 
 
 

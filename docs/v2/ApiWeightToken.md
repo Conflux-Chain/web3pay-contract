@@ -11,7 +11,7 @@ Config api weights and display as 1155 NFT.
 
 
 
-### `initialize(contract IApp belongsTo, string name, string symbol, string uri, address owner, uint256 defaultWeight)` (public)
+### `initialize(contract IApp belongsTo, string name, string symbol, string uri, uint256 defaultWeight)` (public)
 
 
 

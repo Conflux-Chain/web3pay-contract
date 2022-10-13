@@ -5,45 +5,30 @@ Provider manages card templates here.
 
 
 
-### `getTemplate(uint256 id) → struct CardTemplate.Template t` (public)
+### `initialize(contract IApp belongsTo_)` (public)
 
 
 
 
 
-### `config(struct CardTemplate.Template template)` (external)
+### `getTemplate(uint256 id) → struct ICardTemplate.Template t` (public)
 
 
 
 
 
+### `config(struct ICardTemplate.Template template)` (external)
 
 
-### `Template`
 
 
-uint256 id
+
+### `list(uint256 offset, uint256 limit) → struct ICardTemplate.Template[], uint256 total` (public)
 
 
-string name
 
+List templates.
 
-string description
-
-
-string icon
-
-
-uint256 duration
-
-
-uint256 price
-
-
-uint8 status
-
-
-uint8 level
 
 
 
