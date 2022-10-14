@@ -21,8 +21,9 @@ export async function main() {
 	console.log(`found ${files.length} file(s) at ${path}`)
 	for (let dir of files) {
 		const name = dir.split('.')[0]
-		let jsonPath = `.${path}/${dir}/${name}.json`;
+		let jsonPath = `${process.cwd()}/${path}/${dir}/${name}.json`;
 		if (!fs.existsSync(jsonPath)) {
+			console.log(`not exists ${jsonPath}`)
 			continue
 		}
 		const json = require(jsonPath);
