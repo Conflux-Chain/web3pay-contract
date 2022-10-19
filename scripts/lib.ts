@@ -125,6 +125,7 @@ export async function deployV2App(asset: string, swap:string) {
 
 	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} =
 		await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address, exchange.address])
+	const {instance:readFunctionsProxy, beacon: readFunctionsBeacon} = await deployWithBeaconProxy("ReadFunctions", [appRegistryInst.address]);
 
 	console.log(`deploy ok, create app now...`)
 	const appRegistry = appRegistryInst as AppRegistry;
@@ -160,6 +161,8 @@ export async function deployV2App(asset: string, swap:string) {
 		appFactoryImpl: appFactoryImpl?.address, appFactoryProxy: appFactoryProxy?.address, appFactoryBeacon:appFactoryBeacon.address,
 
 		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address, appRegFactoryBeacon:appRegFactoryBeacon.address,
+		readFunctionsProxy: readFunctionsProxy.address, readFunctionsBeacon: readFunctionsBeacon.address,
+		testApp: appX.address,
 	}
 	const {chainId} = await ethers.provider.getNetwork()
 	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`), JSON.stringify(deployInfo, null, 4))

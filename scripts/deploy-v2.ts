@@ -3,7 +3,7 @@ import {
     attach, attachT,
     deploy,
     DEPLOY_V2_INFO,
-    deployV2App, mintERC20,
+    deployV2App, deployWithBeaconProxy, mintERC20,
     networkInfo, sleep,
     timestampLog,
     tokensEthFork,
@@ -17,7 +17,7 @@ import {
     AppCoinV2, AppRegistry,
     CardShop,
     CardTemplate, CardTracker,
-    ERC1967Proxy, ERC20,
+    ERC1967Proxy, ERC20, ReadFunctions,
     SwapExchange,
     UpgradeableBeacon
 } from "../typechain";
@@ -39,12 +39,8 @@ async function setCreatorRoleDisabled(chainId:any, flag: boolean) {
     console.log(`ok `, transactionHash)
 }
 
-async function testVipCardOfApp(appRegistryProxy:string, acc1: string) {
-    await attach("AppRegistry", appRegistryProxy).then(res => res as AppRegistry)
-        // .then(reg=>createApp(reg.address, acc1).then(()=>reg))
-        .then(reg => reg.list(0, 99))
-        // .then(appList=>{console.log(`app list`, appList); return appList;})
-        .then(arr => arr[1]).then(arr => arr[arr.length - 1].addr).then(addr => attach("App", addr)).then(res => res as App)
+async function testVipCardOfApp(appRegistryProxy: string, acc1: string, testApp: any) {
+    await attach("App", testApp).then(res => res as App)
         .then(app => vipCardTest(app, acc1))
 }
 
@@ -55,10 +51,12 @@ async function main() {
     // await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
-    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy,
+    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy, readFunctionsProxy, readFunctionsBeacon, testApp,
         appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
 
+    // await deployWithBeaconProxy("ReadFunctions", [appRegistryProxy]);
+    // await upgradeBeacon("ReadFunctions", [], readFunctionsBeacon);
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
     // attachT<AppRegistry>("AppRegistry", appRegistryProxy).then(res=>res.setExchanger(exchangeProxy)).then(waitTx)
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
@@ -66,14 +64,18 @@ async function main() {
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
-    // await testVipCardOfApp(appRegistryProxy, acc1);
-    // await testDeposit('', acc1);
+    // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
+    // await testDeposit(testApp, acc1, readFunctionsProxy);
     // await createApp(appRegistryProxy, acc1);
 }
-async function testDeposit(appAddr:string, account: string) {
+async function testDeposit(appAddr: string, account: string, readFunctionsAddr: string) {
     const appX = await attachT<App>("App", appAddr);
     const u = await getAsset(appX);
     await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, 3)
+
+    const readFunctionsProxy = await attachT<ReadFunctions>("ReadFunctions", readFunctionsAddr)
+    const {total, apps} = await readFunctionsProxy.listAppByUser(account, 0, 99);
+    console.log(`apps ${JSON.stringify(apps, null, 4)}`)
 }
 async function createApp(appRegistryProxy:string, acc:string) {
     console.log(`appRegistryProxy ${appRegistryProxy}`)

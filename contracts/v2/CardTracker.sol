@@ -32,6 +32,7 @@ contract CardTracker is ICardTracker{
         }
         // override props
         info.props = card.template.props;
+        info.name = card.template.name;
         emit VipChanged(to, info.expireAt);
     }
 
