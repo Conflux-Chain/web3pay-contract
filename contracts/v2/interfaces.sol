@@ -12,8 +12,8 @@ interface IWithdrawHook {
     function withdrawEth(address receiver, uint256 ethMin) external;
 }
 interface IApp is IAccessControl{
-    function getAppCoin() external returns (address);
-    function getVipCoin() external returns (address);
+    function getAppCoin() external view returns (address);
+    function getVipCoin() external view returns (address);
     function initialize(
         AppCoinV2 appCoin_, IVipCoin vipCoin_, address apiWeightToken_,
         uint256 deferTimeSecs_,
@@ -32,13 +32,25 @@ interface IApp is IAccessControl{
 interface IAppRegistry {
     function addUser(address user) external returns (bool);
     function getExchanger() external view returns (ISwapExchange);
+
+    struct AppInfo {
+        address addr;
+        uint256 createTime;
+    }
+    function listByUser(address user, uint256 offset, uint256 limit) external view returns (uint256 total, AppInfo[] memory list);
 }
 interface IVipCoinDeposit {
     function balanceOf(address account) external view returns (uint256, uint256);
     function deposit(uint256 amount, address receiver) external;
 }
 interface IAppAccessor {
-    function appRegistry() external returns (IAppRegistry);
+    function appRegistry() external view returns (IAppRegistry);
+    function link() external view returns (string memory);
+    function paymentType() external view returns (IApp.PaymentType type_);
+    function cardShop() external view returns (ICardShopAccessor);
+}
+interface ICardShopAccessor {
+    function tracker() external view returns (ICardTracker tracker_);
 }
 interface IVipCoinWithdraw {
     function burn(
@@ -94,6 +106,7 @@ interface ICardTracker {
     struct VipInfo {
         uint expireAt;
         ICardTemplate.Props props;
+        string name;
     }
     function getVipInfo(address account) external view returns (VipInfo memory);
     function applyCard(address from, address to, ICards.Card memory card) external;

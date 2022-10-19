@@ -54,6 +54,6 @@ contract CardTemplate is ICardTemplate{
             arr[i] = templates[offset];
             offset += 1;
         }
-        return (arr, nextId);
+        return (arr, nextId - START_ID);
     }
 }

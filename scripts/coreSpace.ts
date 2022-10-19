@@ -16,8 +16,12 @@ async function main() {
 	let url = `https://test.confluxrpc.com`
 	const cfx = new Conflux({url})
 	await cfx.updateNetworkId();
-	const {address:acc1} = cfx.wallet.addPrivateKey(pk)
-	await claimCfx(cfx, acc1);
+	const {address: acc1} = cfx.wallet.addPrivateKey(pk)
+	await claimToken(cfx, acc1, undefined, '');
+	// await claimCfx(cfx, acc1);
+	// await run(cfx, acc1);
+}
+async function run(cfx:Conflux, acc1:string) {
 	const mappedAddr = addressUtil.cfxMappedEVMSpaceAddress(acc1)
 	const balance = await cfx.getBalance(acc1).then(res=>new Drip(res).toCFX())
 	console.log(`network ${await cfx.getStatus().then(res=>res.networkId)} account ${acc1} balance ${balance} CFX`)
@@ -58,6 +62,7 @@ function buildFaucetContract(cfx: Conflux) {
 }
 
 export async function claimCfx(cfx: Conflux, account: string) {
+	console.log(`claimCfx`)
 	const faucet = buildFaucetContract(cfx);
 	return faucet.claimCfx().sendTransaction({
 		from: account,
@@ -66,14 +71,48 @@ export async function claimCfx(cfx: Conflux, account: string) {
 		console.log(`claim cfx ${hash}`)
 	})
 }
-export async function claimToken(cfx: Conflux, account: string, token = "cfxtest:acepe88unk7fvs18436178up33hb4zkuf62a9dk1gv") {
+export async function claimToken(cfx: Conflux, account: string, token = "cfxtest:acepe88unk7fvs18436178up33hb4zkuf62a9dk1gv", to ='') {
+	console.log(`claimToken, account ${account}`)
+	console.log(`token ${token} to ${to}`)
 	const faucet = buildFaucetContract(cfx);
 	return faucet.claimToken(token).sendTransaction({
 		from: account
 	// @ts-ignore
 	}).executed().then(res=>res.transactionHash).then(hash=>{
 		console.log(`claim token ${hash}`)
-	})
+	}).then(()=> {
+		if (to) {
+			const abi = [{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "to",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "transfer",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},]
+			const c20 = cfx.Contract({address: token, abi})
+			return c20.transfer(to, parseEther("100")).sendTransaction({
+				from: account
+				// @ts-ignore
+			}).executed();
+		}
+	});
 }
 if (module == require.main) {
 	main().then()
