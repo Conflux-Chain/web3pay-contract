@@ -64,18 +64,22 @@ async function main() {
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
-    // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
-    // await testDeposit(testApp, acc1, readFunctionsProxy);
     // await createApp(appRegistryProxy, acc1);
+    // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
+    // await testReadFunctions(readFunctionsProxy, acc1);
+    // await testDeposit(testApp, acc1);
 }
-async function testDeposit(appAddr: string, account: string, readFunctionsAddr: string) {
-    const appX = await attachT<App>("App", appAddr);
-    const u = await getAsset(appX);
-    await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, 3)
 
+async function testReadFunctions(readFunctionsAddr: string, account: string) {
     const readFunctionsProxy = await attachT<ReadFunctions>("ReadFunctions", readFunctionsAddr)
     const {total, apps} = await readFunctionsProxy.listAppByUser(account, 0, 99);
     console.log(`apps ${JSON.stringify(apps, null, 4)}`)
+}
+
+async function testDeposit(appAddr: string, account: string) {
+    const appX = await attachT<App>("App", appAddr);
+    const u = await getAsset(appX);
+    await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, 3)
 }
 async function createApp(appRegistryProxy:string, acc:string) {
     console.log(`appRegistryProxy ${appRegistryProxy}`)
