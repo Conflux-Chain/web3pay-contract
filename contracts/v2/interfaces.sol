@@ -58,6 +58,8 @@ interface IVipCoinWithdraw {
         uint256 id,
         uint256 value
     ) external ;
+    function deferTimeSecs() external view returns(uint);
+    function withdrawSchedules(address who) external view returns(uint);
 }
 interface IVipCoin is IERC1155{
     function mint(

@@ -102,5 +102,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
         require(tokenId > TOKEN_ID_AIRDROP, "invalid token id");
         vipCoin.mint(to, tokenId, amount, "");
+
+        appRegistry.addUser(to);
     }
 }

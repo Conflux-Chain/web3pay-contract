@@ -17,6 +17,8 @@ contract ReadFunctions is Initializable {
         uint vipExpireAt;
         uint balance;
         uint airdrop;
+        uint deferTimeSecs; // How long to wait for forceWithdraw
+        uint withdrawSchedule; // When is forceWithdraw requested
     }
 
     IAppRegistry public registry;
@@ -39,7 +41,8 @@ contract ReadFunctions is Initializable {
             IAppAccessor(app).paymentType(),
             vipInfo.name,
             vipInfo.expireAt,
-            coins, airdrops
+            coins, airdrops, IVipCoinWithdraw(app).deferTimeSecs(),
+            IVipCoinWithdraw(app).withdrawSchedules(user)
         );
     }
     function listAppByUser(address user, uint256 offset, uint256 limit) public view returns (uint256 total, UserApp[] memory apps) {
