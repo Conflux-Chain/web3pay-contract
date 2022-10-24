@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./VipCoin.sol";
-import "./SolidProxy.sol";
 
 contract VipCoinFactory {
 
@@ -22,7 +21,7 @@ contract VipCoinFactory {
         address owner,
         address app
     ) public returns (address) {
-        VipCoin vc = VipCoin((address(new SolidProxy(template))));
+        VipCoin vc = VipCoin(Clones.clone(template));
         vc.initialize(name, symbol, owner, app);
 
         emit Created(address(vc), msg.sender, owner);
