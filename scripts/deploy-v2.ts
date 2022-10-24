@@ -63,10 +63,10 @@ async function main() {
     // await upgradeBeacon("VipCoinFactory", [], vipCoinFactoryBeacon);
     // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
-    await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
+    // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
-    testApp = await createApp(appRegistryProxy, acc1);
-    await testVipCardOfApp(appRegistryProxy, acc1, testApp);
+    // testApp = await createApp(appRegistryProxy, acc1);
+    // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
     // await testReadFunctions(readFunctionsProxy, acc1);
     // await testDeposit(testApp, acc1);
 }
