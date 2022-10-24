@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
 import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Metadata.sol";
 import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Enumerable.sol";
+import "./TokenNameSymbol.sol";
 
 /**
  * @dev VipCoin represents application managed coins for user to consume.
@@ -13,7 +14,7 @@ import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Enumerable.sol";
  * On the other hand, unlike a standard ERC1155 token, users could not transfer
  * tokens. Instead, it's up to privileged operator to mint, transfer or burn tokens.
  */
-contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadata {
+contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, TokenNameSymbol {
 
     // role to transfer or burn tokens
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
@@ -22,8 +23,24 @@ contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadat
         string memory name,
         string memory symbol,
         string memory uri
-    ) ERC1155PresetMinterPauser(uri) CRC1155Metadata(name, symbol)  {
+    ) ERC1155PresetMinterPauser(uri) TokenNameSymbol(name, symbol)  {
         _setupRole(CONSUMER_ROLE, _msgSender());
+    }
+
+    /** Clones call to it */
+    function initialize(string memory name_, string memory symbol_, address owner, address belongsToApp) public {
+        require(getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 0, "already initialized");
+
+        _name = name_;
+        _symbol = symbol_;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(MINTER_ROLE, owner);
+        _grantRole(PAUSER_ROLE, owner);
+        _grantRole(CONSUMER_ROLE, owner);
+        // grant roles to app
+        _grantRole(MINTER_ROLE, belongsToApp);
+        _grantRole(CONSUMER_ROLE, belongsToApp);
     }
 
     function burn(
@@ -74,7 +91,7 @@ contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, CRC1155Metadat
         public
         view
         virtual
-        override(ERC1155PresetMinterPauser, CRC1155Enumerable, IERC165)
+        override(ERC1155PresetMinterPauser, CRC1155Enumerable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

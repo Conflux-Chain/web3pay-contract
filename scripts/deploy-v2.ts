@@ -51,8 +51,8 @@ async function main() {
     // await setCreatorRoleDisabled(chainId, true);
     // await checkContract(exchange.address);
 
-    const {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy, readFunctionsProxy, readFunctionsBeacon, testApp,
-        appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon
+    let {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy, readFunctionsProxy, readFunctionsBeacon, testApp,
+        appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon, vipCoinFactoryBeacon,
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
 
     // await deployWithBeaconProxy("ReadFunctions", [appRegistryProxy]);
@@ -60,11 +60,12 @@ async function main() {
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
     // attachT<AppRegistry>("AppRegistry", appRegistryProxy).then(res=>res.setExchanger(exchangeProxy)).then(waitTx)
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
+    // await upgradeBeacon("VipCoinFactory", [], vipCoinFactoryBeacon);
     // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
     // await upgradeBeacon("CardShop", [], cardShopBeacon);
-    // await createApp(appRegistryProxy, acc1);
+    // testApp = await createApp(appRegistryProxy, acc1);
     // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
     // await testReadFunctions(readFunctionsProxy, acc1);
     // await testDeposit(testApp, acc1);
@@ -86,6 +87,8 @@ async function createApp(appRegistryProxy:string, acc:string) {
     const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry;
     const {transactionHash} = await registry.create("name 1", "symbol 1", "link 2", "desc 3", 2, 0, 5, acc).then(waitTx)
     console.log(`create ok ${transactionHash}`)
+    const [total, list] = await registry.listByOwner(acc, 0, 100)
+    return list[list.length-1].addr;
 }
 async function upgradeFactory(name: string, proxyAddr: string) {
     const impl_ = await deploy(name, []);
