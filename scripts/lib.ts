@@ -110,6 +110,7 @@ export async function deployV2App(asset: string, swap:string) {
 	const apiWeightTokenBeacon = await (apiWeightFactory as ApiWeightTokenFactory).beacon();
 
 	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl, beacon: vipCoinFactoryBeacon} = await deployWithBeaconProxy("VipCoinFactory", []);
+	await (vipCoinFactory as VipCoinFactory).createTemplate().then(waitTx)
 
 	const {impl: cardTemplateImpl, beacon: cardTemplateBeacon} = await deployBeacon("CardTemplate", []);
 	const {impl: cardTrackerImpl, beacon: cardTrackerBeacon} = await deployBeacon("CardTracker", [ethers.constants.AddressZero]);
