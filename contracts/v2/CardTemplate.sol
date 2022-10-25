@@ -30,9 +30,16 @@ contract CardTemplate is ICardTemplate{
         t = templates[id];
         //console.log("get template, duration is :", t.duration);
     }
-
+    function checkDuplicate(Template memory template) public view {
+        for(uint i=START_ID; i<nextId; i++) {
+            if (i != template.id) {
+                require((keccak256(abi.encodePacked((template.name))) != keccak256(abi.encodePacked((templates[i].name)))), "Resource name cannot be repeated");
+            }
+        }
+    }
     function config(Template memory template) external {
         require(belongsToApp.hasRole(Roles.CONFIG_ROLE, msg.sender), "require config role");
+        checkDuplicate(template);
         if (template.id == 0) {
             template.id = nextId;
             nextId += 1;

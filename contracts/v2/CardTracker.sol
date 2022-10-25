@@ -30,6 +30,8 @@ contract CardTracker is ICardTracker{
         } else {
             info.expireAt += card.duration;
         }
+        // 311040000 =  3600 * 24 * 30 * 12 * 10, ten years
+        require(info.expireAt - block.timestamp < 311040000, "Expiration time exceeded");
         // override props
         info.props = card.template.props;
         info.name = card.template.name;

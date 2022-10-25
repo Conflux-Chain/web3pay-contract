@@ -98,10 +98,14 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         }
     }
 
-    function makeCard(address to, uint tokenId, uint amount) external override {
-        // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
-        require(tokenId > TOKEN_ID_AIRDROP, "invalid token id");
-        vipCoin.mint(to, tokenId, amount, "");
+    function makeCard(address to, uint tokenId, uint amount, uint totalPrice) external override {
+        if (amount > 0) { // when amount is 0, only apply totalPrice.
+            // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
+            require(tokenId > TOKEN_ID_AIRDROP, "invalid token id");
+            vipCoin.mint(to, tokenId, amount, "");
+        }
+
+        totalCharged += totalPrice;
 
         appRegistry.addUser(to);
     }

@@ -102,7 +102,7 @@ interface ICards {
         uint count;
         ICardTemplate.Template template;
     }
-    function makeCard(address to, uint tokenId, uint amount) external;
+    function makeCard(address to, uint tokenId, uint amount, uint totalPrice) external;
 }
 interface ICardTracker {
     struct VipInfo {
