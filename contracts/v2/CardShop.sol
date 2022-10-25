@@ -44,7 +44,7 @@ contract CardShop {
 
         exchanger.depositETH{value: needEth}(totalPrice, address(belongsToApp));
 
-        _callMakeCard(receiver, template_, count);
+        _callMakeCard(receiver, template_, count, totalPrice);
 
         uint dust = msg.value - needEth;
         if (dust > 0) {
@@ -68,7 +68,7 @@ contract CardShop {
         // deposit for belongsToApp
         erc4626.deposit(assets, address(belongsToApp));
 
-        _callMakeCard(receiver, template_, count);
+        _callMakeCard(receiver, template_, count, totalPrice);
     }
 
     function giveCardBatch(address[] memory receiverArr, uint[] memory countArr, uint templateId) public {
@@ -77,7 +77,7 @@ contract CardShop {
         require(template_.id > 0, "template not found");
         require(receiverArr.length == countArr.length, "invalid length");
         for(uint i=0; i<receiverArr.length; i++){
-            uint cardId = _callMakeCard(receiverArr[i], template_, countArr[i]);
+            uint cardId = _callMakeCard(receiverArr[i], template_, countArr[i], 0);
             emit GAVEN_CARD(msg.sender, receiverArr[i], cardId);
         }
     }
@@ -86,7 +86,7 @@ contract CardShop {
         return cards[id];
     }
 
-    function _callMakeCard(address to, ICardTemplate.Template memory template_, uint count) internal returns (uint){
+    function _callMakeCard(address to, ICardTemplate.Template memory template_, uint count, uint totalPrice) internal returns (uint){
         ICards.Card memory card = ICards.Card(
             nextCardId,
             (template_.duration + template_.giveawayDuration) * count, // total duration
@@ -97,7 +97,8 @@ contract CardShop {
         uint TOKEN_ID_VIP = 3; // defined in App.sol. Can not access constant variable in interface.
         uint vipTokenBalance = IVipCoin(belongsToApp.getVipCoin()).balanceOf(to, TOKEN_ID_VIP);
         if (vipTokenBalance == 0) { // only create one VIP NFT for each account.
-            instance.makeCard(to, TOKEN_ID_VIP, 1);
+            // count is 0, only apply totalPrice
+            instance.makeCard(to, TOKEN_ID_VIP, 0, totalPrice);
         }
         cards[card.id] = card;
         tracker.applyCard(address(0), to, card);

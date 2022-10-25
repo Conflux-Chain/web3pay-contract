@@ -157,7 +157,7 @@ async function vipCardTest(appX: App, acc1: string) {
     const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
     let tpl = {
         description: "", duration: 1, id: 0, giveawayDuration: 2,// will auto generate
-        name: "test card", price: 4, props: {keys: ["level"], values: ["1"]}
+        name: `test card ${Date.now()}`, price: 4, props: {keys: ["level"], values: ["1"]}
     };
     await template.config(tpl).then(waitTx)
     const templateId = await template.nextId().then(res => res.sub(1));
