@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./VipCoin.sol";
-import "./SolidProxy.sol";
 
 contract VipCoinFactory {
 
