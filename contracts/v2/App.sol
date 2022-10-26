@@ -54,7 +54,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
-        appCoin.redeem(amount, to, address(this));
+//        appCoin.redeem(amount, to, address(this)); // This way doesn't present transferring funds from App to taker.
+        uint assets = appCoin.redeem(amount, address(this), address(this));
+        IERC20(appCoin.asset()).transfer(to, assets);
     }
 
     /** Billing service calls it to charge for api cost. */

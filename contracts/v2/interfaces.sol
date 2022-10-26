@@ -104,6 +104,9 @@ interface ICards {
     }
     function makeCard(address to, uint tokenId, uint amount, uint totalPrice) external;
 }
+interface IMetaBuilder {
+    function buildMeta(uint tokenId) external view returns (string memory);
+}
 interface ICardTracker {
     struct VipInfo {
         uint expireAt;

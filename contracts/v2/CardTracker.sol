@@ -13,6 +13,7 @@ contract CardTracker is ICardTracker{
     constructor(address eventSource) {
         initialize(eventSource);
     }
+
     function initialize(address eventSource) public {
         require(_eventSource == address(0), "already initialized");
         _eventSource = eventSource;

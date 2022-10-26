@@ -6,10 +6,9 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import "./AppCoinV2.sol";
 import "./ApiWeightToken.sol";
+import "./Constant.sol";
 
 abstract contract AppCore is Initializable, AccessControlEnumerable, IApp {
-
-    uint256 public constant TOKEN_ID_COIN = 0;
 
     AppCoinV2 internal appCoin;
     IVipCoin internal vipCoin;

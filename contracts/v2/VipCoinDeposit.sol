@@ -6,12 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 //import "hardhat/console.sol";
 import "./AppCore.sol";
 import "./Roles.sol";
+import "./Constant.sol";
 
 abstract contract VipCoinDeposit is IVipCoinDeposit, AppCore, ReentrancyGuard {
 
     event Deposit(address indexed operator, address indexed receiver, uint256 indexed tokenId, uint256 amount);
-
-    uint256 public constant TOKEN_ID_AIRDROP = 1;
 
     IAppRegistry public appRegistry;
 
