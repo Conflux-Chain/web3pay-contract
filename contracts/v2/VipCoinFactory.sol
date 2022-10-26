@@ -12,9 +12,9 @@ contract VipCoinFactory {
     address public owner;
     IMetaBuilder public metaBuilder;
 
-    function setOwner() public {
+    function setOwner(address to) public {
         require(owner == address(0), "already set");
-        owner = owner;
+        owner = to;
     }
 
     function createTemplate() public {

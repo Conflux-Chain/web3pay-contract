@@ -15,7 +15,6 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
     bytes32 public constant TAKE_PROFIT_ROLE = keccak256("TAKE_PROFIT_ROLE");
-    uint256 public constant TOKEN_ID_VIP = 3; // only one NFT for VIP
     // totalCharged fees produced by billing
     uint256 public totalCharged;
     address public cardShop;
