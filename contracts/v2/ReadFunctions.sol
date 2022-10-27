@@ -20,6 +20,7 @@ contract ReadFunctions is Initializable, IMetaBuilder {
         uint airdrop;
         uint deferTimeSecs; // How long to wait for forceWithdraw
         uint withdrawSchedule; // When is forceWithdraw requested
+        ICardShopAccessor cardShop;
     }
 
     IAppRegistry public registry;
@@ -60,7 +61,8 @@ contract ReadFunctions is Initializable, IMetaBuilder {
             vipInfo.name,
             vipInfo.expireAt,
             coins, airdrops, IVipCoinWithdraw(app).deferTimeSecs(),
-            IVipCoinWithdraw(app).withdrawSchedules(user)
+            IVipCoinWithdraw(app).withdrawSchedules(user),
+            IAppAccessor(app).cardShop()
         );
     }
     function listAppByUser(address user, uint256 offset, uint256 limit) public view returns (uint256 total, UserApp[] memory apps) {
