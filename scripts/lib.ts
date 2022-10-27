@@ -9,7 +9,7 @@ import {
 	CardTemplate,
 	CardTracker, ERC1967Proxy, ERC20,
 	IERC20,
-	ISwap, MyERC1967,
+	ISwap, MyERC1967, ReadFunctions,
 	SwapExchange,
 	TokenRouter, UpgradeableBeacon, VipCoin, VipCoinFactory
 } from "../typechain";
@@ -94,7 +94,7 @@ export async function deployWith1967Proxy(implName:string, initArgv: any[]) {
 	return {impl, proxy, instance}
 }
 export const DEPLOY_V2_INFO = `./artifacts/deploy-v2.json.txt`
-export async function deployV2App(asset: string, swap:string) {
+export async function deployV2App(asset: string, swap:string, tag='') {
 	console.log(`use asset ${asset}`)
 	const v2app = await deploy("AppCoinV2", [asset]) as AppCoinV2;
 	const appOwner = await v2app.signer.getAddress();
@@ -110,6 +110,7 @@ export async function deployV2App(asset: string, swap:string) {
 	const apiWeightTokenBeacon = await (apiWeightFactory as ApiWeightTokenFactory).beacon();
 
 	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl, beacon: vipCoinFactoryBeacon} = await deployWithBeaconProxy("VipCoinFactory", []);
+	await fixOwner(vipCoinFactory.address);
 	await (vipCoinFactory as VipCoinFactory).createTemplate().then(waitTx)
 
 	const {impl: cardTemplateImpl, beacon: cardTemplateBeacon} = await deployBeacon("CardTemplate", []);
@@ -127,17 +128,9 @@ export async function deployV2App(asset: string, swap:string) {
 	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} =
 		await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address, exchange.address])
 	const {instance:readFunctionsProxy, beacon: readFunctionsBeacon} = await deployWithBeaconProxy("ReadFunctions", [appRegistryInst.address]);
-
-	console.log(`deploy ok, create app now...`)
-	const appRegistry = appRegistryInst as AppRegistry;
-	await appRegistry.create("app x", "appX", "my link", "my desc", 1, 0, 1, appOwner).then(waitTx);
-	const [total, createdList] = await appRegistry.listByOwner(appOwner, 0, 100)
-	const lastApp = createdList[createdList.length - 1];
-	//
-	const appX = await attach("App", lastApp.addr) as App
-	const vipCoinAddr = await appX.getVipCoin()
-	const vipCoin = await attach("VipCoin", vipCoinAddr) as VipCoin;
-	const assetToken = await attach("ERC20", asset) as ERC20;
+	await fixOwner(readFunctionsProxy.address);
+	await setMeta(readFunctionsProxy.address);
+	await vipCoinFactory.setMetaBuilder(readFunctionsProxy.address).then(waitTx)
 
 	const deployInfo = {
 		AppCoinV2: v2app.address,
@@ -163,11 +156,29 @@ export async function deployV2App(asset: string, swap:string) {
 
 		appRegistryImpl: appRegistryImpl?.address, appRegistryProxy: appRegistryInst.address, appRegFactoryBeacon:appRegFactoryBeacon.address,
 		readFunctionsProxy: readFunctionsProxy.address, readFunctionsBeacon: readFunctionsBeacon.address,
-		testApp: appX.address,
+		testApp: '',
 	}
 	const {chainId} = await ethers.provider.getNetwork()
-	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`), JSON.stringify(deployInfo, null, 4))
-	return {v2app, exchange, vipCoin, appX, assetToken};
+	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}${tag}.json`), JSON.stringify(deployInfo, null, 4))
+	console.log(`deployed`)
+	return {v2app, exchange,};
+}
+async function fixOwner(proxy:string) {
+	const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
+	await fns.setOwner(await fns.signer.getAddress()).then(waitTx)
+	console.log(`set owner ok`)
+}
+async function setMeta(proxy:string) {
+	const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
+	await fns.setMeta(
+		[0,1,3],
+		[
+			{name:"Billing", image:"https://test.confluxhub.io/resources/web3pay/billing.jpg"},
+			{name:"Airdrop", image:"https://test.confluxhub.io/resources/web3pay/airdrop.jpg"},
+			{name:"Subscription", image:"https://test.confluxhub.io/resources/web3pay/subscription.jpg"},
+		].map(obj=>JSON.stringify(obj)).map(str=>`data:application/json;base64,${Buffer.from(str).toString("base64")}`)
+	).then(waitTx)
+	console.log(`set meta ok`)
 }
 
 export async function networkInfo() {
