@@ -40,6 +40,8 @@ contract CardTemplate is ICardTemplate{
     function config(Template memory template) external {
         require(belongsToApp.hasRole(Roles.CONFIG_ROLE, msg.sender), "require config role");
         checkDuplicate(template);
+        // 311040000 =  3600 * 24 * 30 * 12 * 10, ten years
+        require(template.duration + template.giveawayDuration < 311040000, "The duration cannot exceed 10 years");
         if (template.id == 0) {
             template.id = nextId;
             nextId += 1;

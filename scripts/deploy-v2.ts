@@ -19,7 +19,7 @@ import {
     CardTemplate, CardTracker,
     ERC1967Proxy, ERC20, ReadFunctions,
     SwapExchange,
-    UpgradeableBeacon
+    UpgradeableBeacon, VipCoinFactory
 } from "../typechain";
 import {ethers, upgrades} from "hardhat";
 import fs from "fs";
@@ -53,14 +53,20 @@ async function main() {
 
     let {cardTemplateBeacon, cardTrackerBeacon, cardShopBeacon, exchangeProxy, readFunctionsProxy, readFunctionsBeacon, testApp,
         appRegistryProxy, apiWeightFactoryProxy,appRegFactoryBeacon, appFactoryBeacon, appUpgradableBeacon, vipCoinFactoryBeacon,
+        vipCoinFactoryProxy,
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}.json`)).toString())
 
     // await deployWithBeaconProxy("ReadFunctions", [appRegistryProxy]);
     // await upgradeBeacon("ReadFunctions", [], readFunctionsBeacon);
+    // await fixOwner(readFunctionsProxy);
+    // await setMeta(readFunctionsProxy);
     // await upgradeBeacon("AppRegistry", [], appRegFactoryBeacon);
     // attachT<AppRegistry>("AppRegistry", appRegistryProxy).then(res=>res.setExchanger(exchangeProxy)).then(waitTx)
     // await upgradeBeacon("AppFactory", [], appFactoryBeacon);
     // await upgradeBeacon("VipCoinFactory", [], vipCoinFactoryBeacon);
+    // await attachT<VipCoinFactory>("VipCoinFactory", vipCoinFactoryProxy).then(v=>v.createTemplate()).then(waitTx)
+    // await fixOwner(vipCoinFactoryProxy);
+    // await attachT<VipCoinFactory>("VipCoinFactory", vipCoinFactoryProxy).then(v=>v.setMetaBuilder(readFunctionsProxy)).then(waitTx)
     // await upgradeBeacon("App", [], appUpgradableBeacon);
     // await upgradeBeacon("CardTracker", [ethers.constants.AddressZero], cardTrackerBeacon);
     // await upgradeBeacon("CardTemplate", [], cardTemplateBeacon);
@@ -70,7 +76,21 @@ async function main() {
     // await testReadFunctions(readFunctionsProxy, acc1);
     // await testDeposit(testApp, acc1);
 }
-
+async function setMeta(proxy:string) {
+    const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
+    await fns.setMeta(
+        [0,1,3],
+        [
+            {name:"Billing", image:""},
+            {name:"Airdrop", image:""},
+            {name:"Subscription", image:""},
+        ].map(obj=>JSON.stringify(obj))
+    ).then(waitTx)
+}
+async function fixOwner(proxy:string) {
+    const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
+    await fns.setOwner(await fns.signer.getAddress()).then(waitTx)
+}
 async function testReadFunctions(readFunctionsAddr: string, account: string) {
     const readFunctionsProxy = await attachT<ReadFunctions>("ReadFunctions", readFunctionsAddr)
     const {total, apps} = await readFunctionsProxy.listAppByUser(account, 0, 99);

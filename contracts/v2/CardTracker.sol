@@ -13,6 +13,7 @@ contract CardTracker is ICardTracker{
     constructor(address eventSource) {
         initialize(eventSource);
     }
+
     function initialize(address eventSource) public {
         require(_eventSource == address(0), "already initialized");
         _eventSource = eventSource;
@@ -31,7 +32,7 @@ contract CardTracker is ICardTracker{
             info.expireAt += card.duration;
         }
         // 311040000 =  3600 * 24 * 30 * 12 * 10, ten years
-        require(info.expireAt - block.timestamp < 311040000, "Expiration time exceeded");
+        require(info.expireAt - block.timestamp < 311040000, "The duration cannot exceed 10 years");
         // override props
         info.props = card.template.props;
         info.name = card.template.name;

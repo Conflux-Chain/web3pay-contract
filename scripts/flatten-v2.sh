@@ -1,6 +1,7 @@
 if [[ -n "$1" ]]
 then
   name=$1
+  echo "$name"
   hardhat flatten contracts/v2/$name.sol > flatten/$name.txt
   exit
 fi

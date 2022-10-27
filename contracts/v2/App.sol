@@ -15,7 +15,6 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
     bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
     bytes32 public constant TAKE_PROFIT_ROLE = keccak256("TAKE_PROFIT_ROLE");
-    uint256 public constant TOKEN_ID_VIP = 3; // only one NFT for VIP
     // totalCharged fees produced by billing
     uint256 public totalCharged;
     address public cardShop;
@@ -54,7 +53,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {
         require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
         totalTakenProfit += amount;
-        appCoin.redeem(amount, to, address(this));
+//        appCoin.redeem(amount, to, address(this)); // This way doesn't present transferring funds from App to taker.
+        uint assets = appCoin.redeem(amount, address(this), address(this));
+        IERC20(appCoin.asset()).transfer(to, assets);
     }
 
     /** Billing service calls it to charge for api cost. */

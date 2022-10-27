@@ -96,10 +96,9 @@ contract CardShop {
         nextCardId ++;
         uint TOKEN_ID_VIP = 3; // defined in App.sol. Can not access constant variable in interface.
         uint vipTokenBalance = IVipCoin(belongsToApp.getVipCoin()).balanceOf(to, TOKEN_ID_VIP);
-        if (vipTokenBalance == 0) { // only create one VIP NFT for each account.
-            // count is 0, only apply totalPrice
-            instance.makeCard(to, TOKEN_ID_VIP, 0, totalPrice);
-        }
+        // only create one VIP NFT for each account.
+        // if count is 0, then only apply totalPrice
+        instance.makeCard(to, TOKEN_ID_VIP, vipTokenBalance == 0 ? 1 : 0, totalPrice);
         cards[card.id] = card;
         tracker.applyCard(address(0), to, card);
         return card.id;

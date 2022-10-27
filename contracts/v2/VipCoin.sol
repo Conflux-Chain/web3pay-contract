@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.
 import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Metadata.sol";
 import "@confluxfans/contracts/token/CRC1155/extensions/CRC1155Enumerable.sol";
 import "./TokenNameSymbol.sol";
+import "./interfaces.sol";
 
 /**
  * @dev VipCoin represents application managed coins for user to consume.
@@ -19,20 +20,23 @@ contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, TokenNameSymbo
     // role to transfer or burn tokens
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
 
+    IMetaBuilder public metaBuilder;
+
     constructor(
         string memory name,
         string memory symbol,
-        string memory uri
-    ) ERC1155PresetMinterPauser(uri) TokenNameSymbol(name, symbol)  {
+        string memory uri_
+    ) ERC1155PresetMinterPauser(uri_) TokenNameSymbol(name, symbol)  {
         _setupRole(CONSUMER_ROLE, _msgSender());
     }
 
     /** Clones call to it */
-    function initialize(string memory name_, string memory symbol_, address owner, address belongsToApp) public {
+    function initialize(string memory name_, string memory symbol_, address owner, address belongsToApp, IMetaBuilder metaBuilder_) public {
         require(getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 0, "already initialized");
 
         _name = name_;
         _symbol = symbol_;
+        metaBuilder = metaBuilder_;
 
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
         _grantRole(MINTER_ROLE, owner);
@@ -41,6 +45,13 @@ contract VipCoin is ERC1155PresetMinterPauser, CRC1155Enumerable, TokenNameSymbo
         // grant roles to app
         _grantRole(MINTER_ROLE, belongsToApp);
         _grantRole(CONSUMER_ROLE, belongsToApp);
+    }
+
+    function uri(uint tokenId) public view override returns (string memory) {
+        if (address(metaBuilder) == address(0)) {
+            return super.uri(tokenId);
+        }
+        return metaBuilder.buildMeta(tokenId);
     }
 
     function burn(
