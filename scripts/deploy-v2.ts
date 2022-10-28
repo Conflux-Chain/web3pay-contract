@@ -72,8 +72,18 @@ async function main() {
     // await testReadFunctions(readFunctionsProxy, acc1);
     // testApp = await createApp(appRegistryProxy, acc1, 1); // type 1 is billing
     // await testDeposit(testApp, acc1);
+    // await clearAllApps(appRegistryProxy);
 }
-
+async function clearAllApps(appRegistryProxy:string) {
+    let registry = await attachT<AppRegistry>("AppRegistry", appRegistryProxy);
+    let role = await registry.MANAGER_ROLE();
+    let account = await registry.signer.getAddress();
+    const hasRole = await registry.hasRole(role, account)
+    if (!hasRole) {
+        await registry.grantRole(role, account).then(waitTx);
+    }
+    await registry.clearAllApps().then(waitTx)
+}
 async function testReadFunctions(readFunctionsAddr: string, account: string) {
     const readFunctionsProxy = await attachT<ReadFunctions>("ReadFunctions", readFunctionsAddr)
     const {total, apps} = await readFunctionsProxy.listAppByUser(account, 0, 99);

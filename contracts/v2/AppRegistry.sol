@@ -25,6 +25,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
     event Removed(address indexed app, address indexed operator);
 
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     AppFactory public appFactory;
     bool public creatorRoleDisabled; // allow any one to create app
@@ -49,6 +50,18 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
 
         exchanger = exchanger_;
         appFactory = appFactory_;
+    }
+    function addApp(address app_) public onlyRole (MANAGER_ROLE){
+        _apps.set(app_, block.timestamp);
+    }
+    function removeApp(address app_) public onlyRole (MANAGER_ROLE){
+        _apps.remove(app_);
+    }
+    function clearAllApps() public onlyRole (MANAGER_ROLE){
+        for (uint i=0; i<_apps.length(); i++) {
+            (address addr, ) = _apps.at(i);
+            _apps.remove(addr);
+        }
     }
     function setExchanger(ISwapExchange exchanger_) public {
         require(address(exchanger) == address(0), "already set");
