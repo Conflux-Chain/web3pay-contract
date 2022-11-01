@@ -46,6 +46,7 @@ async function testVipCardOfApp(appRegistryProxy: string, acc1: string, testApp:
 async function main() {
     timestampLog()
     let tag = '';// deployment info file uses tag;
+    console.log(`use tag [${tag}]`)
     const  {signer, account:acc1, chainId} = await networkInfo()
     // const {usdt, __router} = tokensNet71;
     // await deployV2App(usdt, __router, tag)
@@ -69,41 +70,40 @@ async function main() {
 
     // testApp = await createApp(appRegistryProxy, acc1);
     // await testVipCardOfApp(appRegistryProxy, acc1, testApp);
+    // await testVipCardOfApp(appRegistryProxy, acc1, "0x607362A5326A2F9Eede7678c32A75aBA8b91486F");
     // await testReadFunctions(readFunctionsProxy, acc1);
     // testApp = await createApp(appRegistryProxy, acc1, 1); // type 1 is billing
     // await testDeposit(testApp, acc1);
     // await clearAllApps(appRegistryProxy);
 }
 async function clearAllApps(appRegistryProxy:string) {
-    let registry = await attachT<AppRegistry>("AppRegistry", appRegistryProxy);
-    let role = await registry.MANAGER_ROLE();
-    let account = await registry.signer.getAddress();
-    const hasRole = await registry.hasRole(role, account)
-    if (!hasRole) {
-        await registry.grantRole(role, account).then(waitTx);
-    }
-    await registry.clearAllApps().then(waitTx)
+    //let registry = await attachT<AppRegistry>("AppRegistry", appRegistryProxy);
+    //await registry.remove("").then(waitTx)
 }
 async function testReadFunctions(readFunctionsAddr: string, account: string) {
+    console.log(`readFunctionsAddr`, readFunctionsAddr);
     const readFunctionsProxy = await attachT<ReadFunctions>("ReadFunctions", readFunctionsAddr)
     const {total, apps} = await readFunctionsProxy.listAppByUser(account, 0, 99);
     console.log(`apps ${JSON.stringify(apps, null, 4)}`)
 }
 
-async function testDeposit(appAddr: string, account: string) {
+export async function testDeposit(appAddr: string, account: string) {
     console.log(`app is ${appAddr}`)
     const appX = await attachT<App>("App", appAddr);
     const u = await getAsset(appX);
-    await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, 3)
+    await depositAsset(await attachT<ERC20>("ERC20", u), account, appX, BigInt(3))
 
     await appX.airdrop(account, 1).then(waitTx)
 }
-async function createApp(appRegistryProxy:string, acc:string, payType = 2) {
+export async function createApp(appRegistryProxy:string, owner:string, payType = 2, param: any = {}) {
     console.log(`appRegistryProxy ${appRegistryProxy}`)
     const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry;
-    const {transactionHash} = await registry.create("name 1", "symbol 1", "link 2", "desc 3", payType, 0, 5, acc).then(waitTx)
+    const {name, symbol, link, description } = param;
+    const {transactionHash} = await registry.create(name ||"name 1", symbol || "symbol 1",
+        link || "link 2", description|| "desc 3",
+        payType, 3600, 1, owner).then(waitTx)
     console.log(`create ok ${transactionHash}`)
-    const [total, list] = await registry.listByOwner(acc, 0, 100)
+    const [total, list] = await registry.listByOwner(owner, 0, 100)
     return list[list.length-1].addr;
 }
 async function upgradeFactory(name: string, proxyAddr: string) {
@@ -171,9 +171,10 @@ async function vipCardTest(appX: App, acc1: string) {
     const shop = await attach("CardShop", await appX.cardShop()) as CardShop;
     const template = await attach("CardTemplate", await shop.template()) as CardTemplate;
     const tracker = await attach("CardTracker", await shop.tracker()) as CardTracker;
+    const tid = await template.nextId();
     let tpl = {
-        description: "", duration: 1, id: 0, giveawayDuration: 2,// will auto generate
-        name: `test card ${Date.now()}`, price: 4, props: {keys: ["level"], values: ["1"]}
+        description: "", duration: 1, id: 0 , giveawayDuration: 31,// will auto generate
+        name: `Standard/month`, price: 1, props: {keys: ["Level"], values: ["1"]}
     };
     await template.config(tpl).then(waitTx)
     const templateId = await template.nextId().then(res => res.sub(1));
@@ -193,22 +194,22 @@ async function vipCardTest(appX: App, acc1: string) {
     console.log(`vip info`, await tracker.getVipInfo(acc1).then(({expireAt, props}) => `expireAt ${expireAt} props ${props}`))
 }
 
-async function depositAsset(assetToken: ERC20, acc1: string, appX: App, acAmount: number) {
+async function depositAsset(assetToken: ERC20, acc1: string, appX: App, acAmount: bigint) {
     console.log(`base asset balance ${await assetToken.balanceOf(acc1)}`)
+    await mintERC20(assetToken.address, acc1, formatEther(acAmount));
     await assetToken.approve(appX.address, acAmount).then(waitTx)
     const {transactionHash} = await appX.depositAsset(acAmount, acc1).then(waitTx)
     console.log(`deposit asset ok ${transactionHash}`)
 }
 
-async function testAllV2(acc1: string, v2appCoinAddr: string, exchangeAddr:string, appRegistryAddr: string) {
+export async function testAllV2(acc1: string, v2appCoinAddr: string, exchangeAddr:string, appRegistryAddr: string) {
     const v2app = await attachT<AppCoinV2>("AppCoinV2", v2appCoinAddr);
     const assetToken = await v2app.asset().then(res=>attachT<ERC20>("ERC20", res));
     const exchange = await attachT<SwapExchange>("SwapExchange", exchangeAddr);
     const testAppAddr = await createApp(appRegistryAddr, acc1, 1);// 1 is billing
     const appX = await attachT<App>("App", testAppAddr);
-    // const {v2app, exchange, vipCoin, appX} = await deployV2App(tokensEthFork.usdt, tokensEthFork.__router)
-    console.log(`deploy v2 ok`)
-    const acAmount = 100_000_000//parseEther("1")
+    await appX.setDeferTimeSecs(0).then(waitTx)
+    const acAmount = 1_000_000_000_000_000//parseEther("1")
     const inAmt = await exchange.previewDepositETH(acAmount);
     await exchange.depositETH(acAmount * 3, acc1, {value: inAmt.mul(3)}).then(waitTx).then(({transactionHash})=>{
         console.log(`deposit eth tx hash ${transactionHash}`)
@@ -224,15 +225,19 @@ async function testAllV2(acc1: string, v2appCoinAddr: string, exchangeAddr:strin
         console.log(`depositWithdrawBaseToken fail.`, err)
     });
 
-    await forceWithdrawEth(exchange, appX, acAmount, acc1, inAmt).catch(err=>{
+    await forceWithdrawEth(exchange, appX, acAmount, acc1, inAmt).then(()=>{
+        console.log(`forceWithdrawEth ok`)
+    }).catch(err=>{
         console.log(`forceWithdrawEth fail.`, err)
     });
 
-    await depositAsset(assetToken, acc1, appX, acAmount);
+    await depositAsset(assetToken, acc1, appX, parseEther("1").toBigInt());
     await appX.airdrop(acc1, 1).then(waitTx)
 
     // card
-    await vipCardTest(appX, acc1);
+    await vipCardTest(appX, acc1).catch(e=>{
+        console.log(`vipCardTest fail`, e)
+    });
     // config
     const apiConfig = await appX.getApiWeightToken().then(res=>attach("ApiWeightToken", res)).then(res=>res as ApiWeightToken)
     await apiConfig.setPendingSeconds(0).then(waitTx);
@@ -242,11 +247,26 @@ async function testAllV2(acc1: string, v2appCoinAddr: string, exchangeAddr:strin
     await apiConfig.flushPendingConfig().then(waitTx)
     console.log(`flushPendingConfig ok, weight `, await apiConfig.listResources(0, 9).then(res=>res[0]).then(list=>list[1].weight))
     // charge
-    await appX.chargeBatch([{account: acc1, amount: 1, data: Buffer.from(""),
-        useDetail: [{id: 0, times: 1}]}]).then(waitTx)
+    await appX.chargeBatch([{account: acc1, amount: parseEther("0.9"), data: Buffer.from(""),
+        useDetail: [{id: 0, times: 10}]}]).then(waitTx)
     console.log(`charge ok`)
+
+    console.log(`profit ${await appX.totalCharged()}, taken ${await appX.totalTakenProfit()}`)
+    await appX.takeProfit(acc1, 1).then(waitTx).then(()=>{
+        console.log(`takeProfit ok`)
+    }).catch(e=>{
+        console.log(`takeProfit fail`, e)
+    })
+    console.log(`profit ${await appX.totalCharged()}, taken ${await appX.totalTakenProfit()}`)
+    await appX.takeProfitAsEth(parseEther("0.9"), 0).then(waitTx).then(()=>{
+        console.log(`takeProfitAsEth ok`)
+    }).catch(e=>{
+        console.log(`takeProfitAsEth fail`, e)
+    })
 }
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+if (module === require.main) {
+    main().catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+    });
+}

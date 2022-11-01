@@ -115,7 +115,7 @@ contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
      * - amount: amount of App Coins to withdraw.
      * - receiver: address to receive the ETH.
      */
-    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public nonReentrant {
+    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) public override nonReentrant {
         // requires user to approve AppCoin to this SwapExchange
         amount = appCoin.redeem(amount, address(this), msg.sender);
 
@@ -146,17 +146,6 @@ contract SwapExchange is IWithdrawHook, Initializable, ReentrancyGuard {
         // approve and deposit VIP coin for receiver
         SafeERC20.safeApprove(appCoin, address(app), amount);
         app.deposit(amount, receiver);
-    }
-
-    /**
-     * @dev Implements the IWithdrawHook interface.
-     *
-     * This is to allow users to force withdraw ETH.
-     */
-    function withdrawEth(address receiver, uint256 ethMin) public override {
-        uint256 amount = appCoin.allowance(msg.sender, address(this));
-        amount = appCoin.redeem(amount, address(this), msg.sender);
-        _swapTokensForEth(amount, ethMin, receiver);
     }
 
     /**

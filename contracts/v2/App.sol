@@ -51,11 +51,22 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     }
 
     function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {
-        require(totalTakenProfit + amount <= totalCharged, "Amount exceeds");
+        require(totalTakenProfit + amount <= totalCharged, "App: Amount exceeds");
         totalTakenProfit += amount;
-//        appCoin.redeem(amount, to, address(this)); // This way doesn't present transferring funds from App to taker.
+        // This way doesn't present transferring funds from App to taker.
+        // appCoin.redeem(amount, to, address(this));
         uint assets = appCoin.redeem(amount, address(this), address(this));
         IERC20(appCoin.asset()).transfer(to, assets);
+    }
+
+    function takeProfitAsEth(uint256 amountAppCoin, uint256 amountMinEth) public onlyRole(TAKE_PROFIT_ROLE) {
+        // There is only one configured recipient by design, parameter `to` is not needed.
+
+        require(totalTakenProfit + amountAppCoin <= totalCharged, "App: Amount exceeds");
+        totalTakenProfit += amountAppCoin;
+
+        ISwapExchange exchanger = appRegistry.getExchanger();
+        _withdrawForEth(amountAppCoin, msg.sender, IWithdrawHook(address(exchanger)), amountMinEth);
     }
 
     /** Billing service calls it to charge for api cost. */
@@ -110,4 +121,6 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
 
         appRegistry.addUser(to);
     }
+
+    receive() external payable {}
 }

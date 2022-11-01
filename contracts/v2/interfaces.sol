@@ -7,9 +7,10 @@ import "./AppCoinV2.sol";
 interface ISwapExchange {
     function previewDepositETH(uint256 amount) external view returns (uint256);
     function depositETH(uint256 amount, address receiver) external payable;
+    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) external;
 }
 interface IWithdrawHook {
-    function withdrawEth(address receiver, uint256 ethMin) external;
+    function withdrawETH(uint256 amount, uint256 ethMin, address receiver) external;
 }
 interface IApp is IAccessControl{
     function getAppCoin() external view returns (address);
