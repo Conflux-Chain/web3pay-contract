@@ -25,10 +25,9 @@ abstract contract VipCoinDeposit is IVipCoinDeposit, AppCore, ReentrancyGuard {
      *
      * The 1st amount is from user deposit, and the 2nd amount is from airdrop.
      */
-    function balanceOf(address account) public view override returns (uint256, uint256) {
-        uint256 coins = vipCoin.balanceOf(account, TOKEN_ID_COIN);
-        uint256 airdrops = vipCoin.balanceOf(account, TOKEN_ID_AIRDROP);
-        return (coins, airdrops);
+    function balanceOf(address account) public view override returns (uint256 coins, uint256 airdrops) {
+        coins = vipCoin.balanceOf(account, TOKEN_ID_COIN);
+        airdrops = vipCoin.balanceOf(account, TOKEN_ID_AIRDROP);
     }
 
     /**

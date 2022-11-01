@@ -34,7 +34,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
     // owner address => map(app address => block.timestamp)
     mapping(address => EnumerableMap.AddressToUintMap) private _owners;
     // user address => set(app address)
-    mapping(address => EnumerableSet.AddressSet) private _users;
+    mapping(address => EnumerableSet.AddressSet) internal _users;
     ISwapExchange internal exchanger;
 
     // TODO supports to transfer app owner?
@@ -50,6 +50,7 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         exchanger = exchanger_;
         appFactory = appFactory_;
     }
+
     function setExchanger(ISwapExchange exchanger_) public {
         require(address(exchanger) == address(0), "already set");
         exchanger = exchanger_;
@@ -148,10 +149,8 @@ contract AppRegistry is Initializable, AccessControlEnumerable {
         for (uint256 i = offset; i < end; i++) {
             address addr = _users[user].at(i);
             // app may be removed by approved operator
-            (bool ok, uint256 createTime) = _apps.tryGet(addr);
-            if (ok) {
-                result[i - offset] = AppInfo(addr, createTime);
-            }
+            (/*bool ok*/, uint256 createTime) = _apps.tryGet(addr);
+            result[i - offset] = AppInfo(addr, createTime);
         }
 
         return (total, result);

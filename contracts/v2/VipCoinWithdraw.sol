@@ -23,6 +23,9 @@ abstract contract VipCoinWithdraw is AppCore {
         deferTimeSecs = deferTimeSecs_;
     }
 
+    function setDeferTimeSecs(uint256 deferTimeSecs_) public onlyRole(Roles.CONFIG_ROLE) {
+        deferTimeSecs = deferTimeSecs_;
+    }
     /**
      * @dev Withdraw all VIP coins by approved account.
      *
@@ -81,8 +84,17 @@ abstract contract VipCoinWithdraw is AppCore {
         uint256 balance = vipCoin.balanceOf(_msgSender(), TOKEN_ID_COIN);
         vipCoin.burn(_msgSender(), TOKEN_ID_COIN, balance);
 
+        _withdrawForEth(balance, receiver, hook, ethMin);
+    }
+    function _withdrawForEth(uint balance, address receiver, IWithdrawHook hook, uint256 ethMin) internal {
+        uint remBalance = address(this).balance;
         SafeERC20.safeApprove(appCoin, address(hook), balance);
-        hook.withdrawEth(receiver, ethMin);
+        hook.withdrawETH(balance, ethMin, address(this));
+        uint swapEth = address(this).balance - remBalance;
+        require(swapEth >= ethMin, "App: INSUFFICIENT_OUTPUT_AMOUNT");
+
+        (bool success,) = msg.sender.call{value : swapEth}(new bytes(0));
+        require(success, 'App: transfer ETH failed');
 
         emit Withdraw(_msgSender(), _msgSender(), receiver, balance);
     }
