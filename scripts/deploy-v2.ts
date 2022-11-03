@@ -99,12 +99,14 @@ export async function createApp(appRegistryProxy:string, owner:string, payType =
     console.log(`appRegistryProxy ${appRegistryProxy}`)
     const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry;
     const {name, symbol, link, description } = param;
-    const {transactionHash} = await registry.create(name ||"name 1", symbol || "symbol 1",
+    let finalName = name ||"name 1";
+    const {transactionHash} = await registry.create(finalName, symbol || "symbol 1",
         link || "link 2", description|| "desc 3",
         payType, 3600, 1, owner).then(waitTx)
-    console.log(`create ok ${transactionHash}`)
     const [total, list] = await registry.listByOwner(owner, 0, 100)
-    return list[list.length-1].addr;
+    let addr = list[list.length-1].addr;
+    console.log(`create ok tx ${transactionHash}, \n `, addr, finalName)
+    return addr;
 }
 async function upgradeFactory(name: string, proxyAddr: string) {
     const impl_ = await deploy(name, []);
@@ -124,7 +126,7 @@ async function upgradeBeaconInFactory(implName:string, argv:any[], factoryAddr:s
     console.log(`beacon at ${beacon}`)
     return upgradeBeacon(implName, argv, beacon);
 }
-async function upgradeBeacon(name:string, argv:any[], beacon:string) {
+export async function upgradeBeacon(name:string, argv:any[], beacon:string) {
     const impl = await deploy(name, argv);
     const beaconContract = await attach("UpgradeableBeacon", beacon) as UpgradeableBeacon;
     await beaconContract.upgradeTo(impl!.address);

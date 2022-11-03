@@ -48,7 +48,8 @@ const config: HardhatUserConfig = {
     },
     fork: {
       // starts by: hardhat node --fork <your rpc provider>
-      url: "http://127.0.0.1:8545/"
+      url: "http://127.0.0.1:8545/",
+      gasPrice: 1_000_000_000,
     },
   },
   gasReporter: {

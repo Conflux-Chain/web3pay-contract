@@ -95,6 +95,7 @@ export async function deployWith1967Proxy(implName:string, initArgv: any[]) {
 }
 export const DEPLOY_V2_INFO = `./artifacts/deploy-v2.json.txt`
 export async function deployV2App(asset: string, swap:string, tag='') {
+	const initialBalance = await ethers.getSigners().then(res=>res[0]).then(s=>s.getBalance())
 	console.log(`use asset ${asset}`)
 	const v2app = await deploy("AppCoinV2", [asset]) as AppCoinV2;
 	const appOwner = await v2app.signer.getAddress();
@@ -160,7 +161,8 @@ export async function deployV2App(asset: string, swap:string, tag='') {
 	}
 	const {chainId} = await ethers.provider.getNetwork()
 	await fs.writeFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}${tag}.json`), JSON.stringify(deployInfo, null, 4))
-	console.log(`deployed`)
+	const finishBalance = await ethers.getSigners().then(res=>res[0]).then(s=>s.getBalance())
+	console.log(`deployed, cost ${formatEther(initialBalance.sub(finishBalance))}`)
 	return {v2app, exchange,};
 }
 async function fixOwner(proxy:string) {

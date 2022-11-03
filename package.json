@@ -11,6 +11,7 @@
     "docgen-sol-doesn't work": "hardhat docgen",
     "start-hardhat-node": "hardhat node",
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
+    "deploy-prod": "hardhat --network net1030 run scripts/deploy-prod.ts",
     "test-card-deploy": "hardhat --network test run scripts/deploy-card.ts",
     "test-deploy-v2": "hardhat --network fork run scripts/deploy-v2.ts",
     "test-accounts": "hardhat --network test accounts",
