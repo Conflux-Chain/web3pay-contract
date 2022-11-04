@@ -30,10 +30,10 @@ import {Conflux, format} from "js-conflux-sdk";
 
 async function main() {
     timestampLog()
-    await grant();
+    await run();
 }
 
-async function grantRoles(app: string) {
+async function setAppProps(app: string) {
     const appX = await ethers.getContractAt("App", app).then(res=>res as App)
     const cardShop = await appX.cardShop(); // do not modify it
     let link = "" || await appX.link();
@@ -43,13 +43,13 @@ async function grantRoles(app: string) {
     console.log(`ok`)
 }
 
-async function grant() {
+async function run() {
     let tag = '-prod';// deployment info file uses tag;
     console.log(`use tag [${tag}]`)
     const {signer, account: acc1, chainId} = await networkInfo()
 
     // replace placeholder
-    await grantRoles("app");
+    await setAppProps("app");
 }
 main().catch((error) => {
     console.error(error);
