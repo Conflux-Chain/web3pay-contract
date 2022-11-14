@@ -76,6 +76,22 @@ async function main() {
     // await testDeposit(testApp, acc1);
     // await clearAllApps(appRegistryProxy);
 }
+export async function testReadRoles(appAddr: string, readFnsAddr:string) {
+    const reader = await attachT<ReadFunctions>("ReadFunctions", readFnsAddr);
+    const rolesInfo = await reader.appRoles(appAddr)
+    console.log(`roles info`, rolesInfo)
+}
+export async function testSetAppInfo(appAddr:string) {
+    const app = await attachT<App>("App", appAddr);
+    await app.setAppInfo("link", "desc", Date.now()).then(waitTx)
+    console.log(`set app info ok`)
+    const adminRole = await app.DEFAULT_ADMIN_ROLE();
+    await app.revokeRole(adminRole, await app.signer.getAddress())
+        .then(waitTx) // should revert
+        .catch(e=>{
+            console.log(`ok ${e.message}`)
+        })
+}
 async function clearAllApps(appRegistryProxy:string) {
     //let registry = await attachT<AppRegistry>("AppRegistry", appRegistryProxy);
     //await registry.remove("").then(waitTx)
@@ -106,6 +122,14 @@ export async function createApp(appRegistryProxy:string, owner:string, payType =
     const [total, list] = await registry.listByOwner(owner, 0, 100)
     let addr = list[list.length-1].addr;
     console.log(`create ok tx ${transactionHash}, \n `, addr, finalName)
+    return addr;
+}
+export async function lastApp(appRegistryProxy:string) {
+    const registry = await attach("AppRegistry", appRegistryProxy) as AppRegistry;
+    let me = await registry.signer.getAddress();
+    const [total, list] = await registry.listByOwner(me, 0, 1000)
+    let addr = list[list.length-1].addr;
+    console.log(`last app is `, addr)
     return addr;
 }
 async function upgradeFactory(name: string, proxyAddr: string) {

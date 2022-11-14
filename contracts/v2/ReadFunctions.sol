@@ -2,9 +2,11 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/IAccessControlEnumerable.sol";
 
 import "./interfaces.sol";
 import "./Constant.sol";
+import "./Roles.sol";
 
 /** Helper functions for reading. */
 contract ReadFunctions is Initializable, IMetaBuilder {
@@ -21,6 +23,11 @@ contract ReadFunctions is Initializable, IMetaBuilder {
         uint deferTimeSecs; // How long to wait for forceWithdraw
         uint withdrawSchedule; // When is forceWithdraw requested
         ICardShopAccessor cardShop;
+    }
+    struct RoleInfo {
+        string name;
+        bytes32 hash;
+        address[] members;
     }
 
     IAppRegistry public registry;
@@ -47,6 +54,23 @@ contract ReadFunctions is Initializable, IMetaBuilder {
     }
     function buildMeta(uint tokenId) external view override returns (string memory) {
         return nftMeta[tokenId];
+    }
+
+    function appRoleMembers(IAccessControlEnumerable app, bytes32 role, string memory name) public view returns (RoleInfo memory info){
+        uint count = app.getRoleMemberCount(role);
+        address[] memory members = new address[](count);
+        for(uint i=0; i<count; i++) {
+            members[i] = app.getRoleMember(role, i);
+        }
+        return RoleInfo(name, role, members);
+    }
+    function appRoles(IAccessControlEnumerable app) public view returns (RoleInfo[] memory members2d){
+        members2d = new RoleInfo[](5);
+        members2d[0] = appRoleMembers(app, 0x00, "DEFAULT_ADMIN_ROLE"); // default admin role
+        members2d[1] = appRoleMembers(app, Roles.CONFIG_ROLE, "CONFIG_ROLE");
+        members2d[2] = appRoleMembers(app, Roles.AIRDROP_ROLE, "AIRDROP_ROLE");
+        members2d[3] = appRoleMembers(app, Roles.CHARGE_ROLE, "CHARGE_ROLE");
+        members2d[4] = appRoleMembers(app, Roles.TAKE_PROFIT_ROLE, "TAKE_PROFIT_ROLE");
     }
 
     function getUserAppInfo(address user, address app) public view returns (UserApp memory userApp){
