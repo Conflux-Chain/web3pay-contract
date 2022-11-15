@@ -6,6 +6,7 @@ import "./VipCoinDeposit.sol";
 import "./VipCoinWithdraw.sol";
 import "./AppCoinV2.sol";
 import "./interfaces.sol";
+import "./Roles.sol";
 import "./CardShop.sol";
 
 /**
@@ -13,8 +14,6 @@ import "./CardShop.sol";
  */
 contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     // role who can charge coin from user
-    bytes32 public constant CHARGE_ROLE = keccak256("CHARGE_ROLE");
-    bytes32 public constant TAKE_PROFIT_ROLE = keccak256("TAKE_PROFIT_ROLE");
     // totalCharged fees produced by billing
     uint256 public totalCharged;
     address public cardShop;
@@ -31,8 +30,8 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         __VipCoinDeposit_init(owner, appRegistry_);
         __VipCoinWithdraw_init(deferTimeSecs_, owner);
         _grantRole(Roles.CONFIG_ROLE, owner);
-        _grantRole(CHARGE_ROLE, owner);
-        _grantRole(TAKE_PROFIT_ROLE, owner);
+        _grantRole(Roles.CHARGE_ROLE, owner);
+        _grantRole(Roles.TAKE_PROFIT_ROLE, owner);
     }
 
     // avoid stack too deep
@@ -49,8 +48,15 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         description = description_;
         paymentType = paymentType_;
     }
-
-    function takeProfit(address to, uint256 amount) public onlyRole(TAKE_PROFIT_ROLE) {
+    function setAppInfo(string memory link_, string memory description_, uint withdrawDelay) public {
+        require(hasRole(Roles.CONFIG_ROLE, msg.sender), "not permitted");
+        if(paymentType == PaymentType.BILLING) {
+            deferTimeSecs = withdrawDelay;
+        }
+        link = link_;
+        description = description_;
+    }
+    function takeProfit(address to, uint256 amount) public onlyRole(Roles.TAKE_PROFIT_ROLE) {
         require(totalTakenProfit + amount <= totalCharged, "App: Amount exceeds");
         totalTakenProfit += amount;
         // This way doesn't present transferring funds from App to taker.
@@ -59,7 +65,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         IERC20(appCoin.asset()).transfer(to, assets);
     }
 
-    function takeProfitAsEth(uint256 amountAppCoin, uint256 amountMinEth) public onlyRole(TAKE_PROFIT_ROLE) {
+    function takeProfitAsEth(uint256 amountAppCoin, uint256 amountMinEth) public onlyRole(Roles.TAKE_PROFIT_ROLE) {
         // There is only one configured recipient by design, parameter `to` is not needed.
 
         require(totalTakenProfit + amountAppCoin <= totalCharged, "App: Amount exceeds");
@@ -70,7 +76,7 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     }
 
     /** Billing service calls it to charge for api cost. */
-    function chargeBatch(IAppConfig.ChargeRequest[] memory requestArray) public onlyRole(CHARGE_ROLE) {
+    function chargeBatch(IAppConfig.ChargeRequest[] memory requestArray) public onlyRole(Roles.CHARGE_ROLE) {
         for(uint i=0; i<requestArray.length; i++) {
             IAppConfig.ChargeRequest memory request = requestArray[i];
             charge(request.account, request.amount, request.data, request.useDetail);
@@ -120,6 +126,11 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         totalCharged += totalPrice;
 
         appRegistry.addUser(to);
+    }
+
+    function revokeRole(bytes32 role, address account) public virtual override onlyRole(getRoleAdmin(role)) {
+        require(role != DEFAULT_ADMIN_ROLE || getRoleMemberCount(DEFAULT_ADMIN_ROLE) > 1, "can not revoke last one");
+        super.revokeRole(role, account);
     }
 
     receive() external payable {}

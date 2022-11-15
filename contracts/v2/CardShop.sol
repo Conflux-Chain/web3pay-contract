@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "./interfaces.sol";
 import "./Roles.sol";
+import "./Constant.sol";
 //import "hardhat/console.sol";
 
 //TODO access control
@@ -94,7 +95,6 @@ contract CardShop {
             template_
         );
         nextCardId ++;
-        uint TOKEN_ID_VIP = 3; // defined in App.sol. Can not access constant variable in interface.
         uint vipTokenBalance = IVipCoin(belongsToApp.getVipCoin()).balanceOf(to, TOKEN_ID_VIP);
         // only create one VIP NFT for each account.
         // if count is 0, then only apply totalPrice
