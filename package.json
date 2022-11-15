@@ -12,7 +12,7 @@
     "start-hardhat-node": "hardhat node",
     "test-deploy": "hardhat --network test run scripts/deploy.ts",
     "deploy-prod": "hardhat --network net1030 run scripts/deploy-prod.ts",
-    "upgrade-1": "hardhat --network fork run scripts/upgrade-1-privilege.ts",
+    "upgrade-1": "hardhat --network net1030 run scripts/upgrade-1-privilege.ts",
     "grant-operator": "hardhat --network net1030 run scripts/grant-operator.ts",
     "set-app-props": "hardhat --network net1030 run scripts/set-app-props.ts",
     "test-card-deploy": "hardhat --network test run scripts/deploy-card.ts",

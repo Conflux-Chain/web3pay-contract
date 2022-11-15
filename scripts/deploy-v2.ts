@@ -150,12 +150,12 @@ async function upgradeBeaconInFactory(implName:string, argv:any[], factoryAddr:s
     console.log(`beacon at ${beacon}`)
     return upgradeBeacon(implName, argv, beacon);
 }
-export async function upgradeBeacon(name:string, argv:any[], beacon:string) {
+export async function upgradeBeacon(name:string, argv:any[], beacon:string, verify = true) {
     const impl = await deploy(name, argv);
     const beaconContract = await attach("UpgradeableBeacon", beacon) as UpgradeableBeacon;
     await beaconContract.upgradeTo(impl!.address);
     console.log(`upgraded ${name} ${impl!.address}`);
-    setTimeout(()=>{
+    verify && setTimeout(()=>{
         verifyContract(name, impl?.address!);
     }, 10_000);
 }

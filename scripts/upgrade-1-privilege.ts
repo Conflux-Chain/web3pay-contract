@@ -47,8 +47,8 @@ async function upgradePrivilege() {
         vipCoinFactoryProxy, AppCoinV2:appCoinAddr,
     } = JSON.parse(fs.readFileSync(DEPLOY_V2_INFO.replace(".json", `.chain-${chainId}${tag}.json`)).toString())
 
-    await upgradeBeacon("App", [], appUpgradableBeacon);
-    await upgradeBeacon("ReadFunctions", [], readFunctionsBeacon);
+    await upgradeBeacon("App", [], appUpgradableBeacon, false);
+    await upgradeBeacon("ReadFunctions", [], readFunctionsBeacon, false);
     console.log(`ok`)
 }
 main().catch((error) => {
