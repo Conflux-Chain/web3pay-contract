@@ -117,6 +117,14 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
     }
 
     function makeCard(address to, uint tokenId, uint amount, uint totalPrice) external override {
+        // SECURITY FIX: makeCard can only be invoked by the registered CardShop.
+        // Before this fix it was an unprotected `external` entry point, letting any
+        // caller mint paid-tier VIP tokens without payment and inflate totalCharged
+        // arbitrarily. CardShop is the sole legitimate caller (it computes totalPrice
+        // from the card template and count after payment), so gating on it closes both
+        // the unauthorized-mint and the billing-inflation vectors.
+        require(msg.sender == cardShop, "App: caller is not cardShop");
+
         if (amount > 0) { // when amount is 0, only apply totalPrice.
             // TOKEN_ID_AIRDROP(1) and TOKEN_ID_COIN(0) are reserved.
             require(tokenId > TOKEN_ID_AIRDROP, "invalid token id");
