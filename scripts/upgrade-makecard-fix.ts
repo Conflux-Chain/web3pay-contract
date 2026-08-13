@@ -38,10 +38,12 @@ async function main() {
         beaconAddr = appBeacon;
         console.log(`using APP_BEACON=${beaconAddr}`);
     } else if (appProxy) {
-        // BeaconProxy's typed contract does not expose beacon(); use a minimal
-        // IBeacon interface (or read the EIP-1967 slot) to derive the beacon.
-        const ib = new ethers.Contract(appProxy, ["function beacon() view returns (address)"], ethers.provider);
-        beaconAddr = await ib.beacon();
+        // BeaconProxy's typed contract does not expose beacon(), and the dynamic
+        // ethers.Contract provider type clashes with hardhat's nested ethers copy.
+        // Read the EIP-1967 beacon slot directly instead (no Contract construction).
+        const beaconSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        const raw = await ethers.provider.getStorageAt(appProxy, beaconSlot);
+        beaconAddr = ethers.utils.getAddress("0x" + raw.slice(-40));
         console.log(`derived beacon ${beaconAddr} from APP_PROXY=${appProxy}`);
     } else {
         throw new Error("Missing required env var: set APP_BEACON or APP_PROXY");
