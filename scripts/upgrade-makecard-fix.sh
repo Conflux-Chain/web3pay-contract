@@ -39,6 +39,10 @@ export PRIVATE_KEY
 export APP_BEACON
 export APP_PROXY
 
+# 测试网 RPC (hardhat 配置中 network "test" 读取 TEST_RPC_URL)
+# 使用 net1030 (主网) 时此变量不生效, 可忽略。
+export TEST_RPC_URL="${TEST_RPC_URL:-https://evmtestnet.confluxrpc.com}"
+
 echo ">>> 使用网络: $NETWORK"
 echo ">>> beacon/env 参数已就绪, 开始执行升级..."
 
