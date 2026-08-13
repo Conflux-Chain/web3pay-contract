@@ -22,7 +22,7 @@
  * beacon.upgradeTo will revert with an "Ownable: caller is not the owner" error.
  */
 import {deploy, waitTx} from "./lib";
-import {UpgradeableBeacon, BeaconProxy, App} from "../typechain";
+import {UpgradeableBeacon, App} from "../typechain";
 import {ethers} from "hardhat";
 
 async function main() {
@@ -38,8 +38,10 @@ async function main() {
         beaconAddr = appBeacon;
         console.log(`using APP_BEACON=${beaconAddr}`);
     } else if (appProxy) {
-        const proxy = (await ethers.getContractFactory("BeaconProxy")).attach(appProxy) as BeaconProxy;
-        beaconAddr = await proxy.beacon();
+        // BeaconProxy's typed contract does not expose beacon(); use a minimal
+        // IBeacon interface (or read the EIP-1967 slot) to derive the beacon.
+        const ib = new ethers.Contract(appProxy, ["function beacon() view returns (address)"], ethers.provider);
+        beaconAddr = await ib.beacon();
         console.log(`derived beacon ${beaconAddr} from APP_PROXY=${appProxy}`);
     } else {
         throw new Error("Missing required env var: set APP_BEACON or APP_PROXY");
