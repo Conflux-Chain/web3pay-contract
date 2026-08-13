@@ -38,6 +38,16 @@ async function main() {
     const appBeacon = appBeaconRaw === "__APP_BEACON_ADDRESS_HERE__" ? "" : appBeaconRaw;
     const appProxy = appProxyRaw === "__APP_PROXY_ADDRESS_HERE__" ? "" : appProxyRaw;
 
+    // 0) Read-only info (free, no gas) — print BEFORE any state-changing call so it
+    //    shows even if the later deploy/upgrade fails (e.g. insufficient funds).
+    if (appProxy) {
+        const app = (await ethers.getContractFactory("App")).attach(appProxy) as App;
+        console.log(`App proxy ${appProxy} link:        ${await app.link()}`);
+        console.log(`App proxy ${appProxy} description: ${await app.description()}`);
+    } else {
+        console.log(`(set APP_PROXY to also read link/description of a specific App instance)`);
+    }
+
     let beaconAddr: string;
     if (appBeacon) {
         beaconAddr = appBeacon;
@@ -67,11 +77,6 @@ async function main() {
     console.log(`current App impl: ${currentImpl}`);
     if (currentImpl.toLowerCase() === impl.address.toLowerCase()) {
         console.log(`beacon already points to the new implementation; nothing to do.`);
-        if (appProxy) {
-            const app = (await ethers.getContractFactory("App")).attach(appProxy) as App;
-            console.log(`App proxy ${appProxy} link:        ${await app.link()}`);
-            console.log(`App proxy ${appProxy} description: ${await app.description()}`);
-        }
         return;
     }
 
@@ -82,17 +87,6 @@ async function main() {
     // 3) Sanity check: beacon now resolves to the new implementation.
     const newImpl = await beacon.implementation();
     console.log(`beacon implementation now: ${newImpl}`);
-
-    // 4) If an App proxy was provided, read its link/description to confirm it is live.
-    if (appProxy) {
-        const app = (await ethers.getContractFactory("App")).attach(appProxy) as App;
-        const link = await app.link();
-        const description = await app.description();
-        console.log(`App proxy ${appProxy} link:        ${link}`);
-        console.log(`App proxy ${appProxy} description: ${description}`);
-    } else {
-        console.log(`(set APP_PROXY to also read link/description of a specific App instance)`);
-    }
 
     console.log(`done. Verify via ReadFunctions / block explorer.`);
 }
