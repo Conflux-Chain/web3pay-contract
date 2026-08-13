@@ -30,8 +30,13 @@ async function main() {
     const deployer = signer.address;
     console.log(`upgrader: ${deployer}`);
 
-    const appBeacon = process.env.APP_BEACON?.trim();
-    const appProxy = process.env.APP_PROXY?.trim();
+    // Treat placeholder literals as "not provided" so a leftover
+    // __APP_BEACON_ADDRESS_HERE__ falls through to APP_PROXY instead of
+    // being used as a real beacon address.
+    const appBeaconRaw = process.env.APP_BEACON?.trim() ?? "";
+    const appProxyRaw = process.env.APP_PROXY?.trim() ?? "";
+    const appBeacon = appBeaconRaw === "__APP_BEACON_ADDRESS_HERE__" ? "" : appBeaconRaw;
+    const appProxy = appProxyRaw === "__APP_PROXY_ADDRESS_HERE__" ? "" : appProxyRaw;
 
     let beaconAddr: string;
     if (appBeacon) {

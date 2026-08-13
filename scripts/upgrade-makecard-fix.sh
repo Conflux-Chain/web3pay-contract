@@ -23,14 +23,19 @@ APP_PROXY="${APP_PROXY:-__APP_PROXY_ADDRESS_HERE__}"
 NETWORK="${NETWORK:-net1030}"
 # =============================================================
 
-# 若 PRIVATE_KEY 仍是占位符则报错退出
-if [ "$PRIVATE_KEY" = "__YOUR_PRIVATE_KEY_HERE__" ]; then
+# 将占位符字面量视为"未填写", 避免被当成真实地址使用
+[ "$PRIVATE_KEY" = "__YOUR_PRIVATE_KEY_HERE__" ] && PRIVATE_KEY=""
+[ "$APP_BEACON" = "__APP_BEACON_ADDRESS_HERE__" ] && APP_BEACON=""
+[ "$APP_PROXY" = "__APP_PROXY_ADDRESS_HERE__" ] && APP_PROXY=""
+
+# 若 PRIVATE_KEY 未填写则报错退出
+if [ -z "$PRIVATE_KEY" ]; then
   echo "ERROR: 请在脚本中填写 PRIVATE_KEY (或 export PRIVATE_KEY=...)" >&2
   exit 1
 fi
 
-# 两个地址占位符不能同时为空
-if [ "$APP_BEACON" = "__APP_BEACON_ADDRESS_HERE__" ] && [ "$APP_PROXY" = "__APP_PROXY_ADDRESS_HERE__" ]; then
+# APP_BEACON 与 APP_PROXY 至少填一个
+if [ -z "$APP_BEACON" ] && [ -z "$APP_PROXY" ]; then
   echo "ERROR: 请在脚本中填写 APP_BEACON 或 APP_PROXY (或 export 对应环境变量)" >&2
   exit 1
 fi
