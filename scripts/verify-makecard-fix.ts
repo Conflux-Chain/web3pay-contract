@@ -15,11 +15,21 @@
 import {ethers} from "hardhat";
 import {App} from "../typechain";
 
+// Reuse the same App proxy addresses as the upgrade/fix script (keyed by chainId),
+// so this check runs directly with just `NETWORK=net71` — no env needed.
+const DEFAULT_APP_PROXY: { [chainId: number]: string } = {
+    71:   "0x607362A5326A2F9Eede7678c32A75aBA8b91486F", // eSpace testnet
+    1030: "0x7F55828E334e63065B88055776db3A58734220Ad", // eSpace mainnet
+};
+
 async function main() {
-    const appProxyRaw = process.env.APP_PROXY?.trim() ?? "";
-    const appProxy = appProxyRaw === "__APP_PROXY_ADDRESS_HERE__" ? "" : appProxyRaw;
+    const network = await ethers.provider.getNetwork();
+    const chainId = Number(network.chainId);
+    const appProxy = (process.env.APP_PROXY?.trim()
+        || DEFAULT_APP_PROXY[chainId]
+        || "").replace("__APP_PROXY_ADDRESS_HERE__", "");
     if (!appProxy) {
-        throw new Error("APP_PROXY not set (select via NETWORK or export APP_PROXY=0x...)");
+        throw new Error(`APP_PROXY not resolvable for chainId ${chainId} (set APP_PROXY=0x...)`);
     }
 
     const app = (await ethers.getContractFactory("App")).attach(appProxy) as App;
