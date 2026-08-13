@@ -55,8 +55,9 @@ async function main() {
     } else if (appProxy) {
         // BeaconProxy's typed contract does not expose beacon(), and the dynamic
         // ethers.Contract provider type clashes with hardhat's nested ethers copy.
-        // Read the EIP-1967 beacon slot directly instead (no Contract construction).
-        const beaconSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+        // Read the EIP-1967 *beacon* slot directly (App instances are BeaconProxy).
+        // NOTE: 0x360894... is the implementation slot; the beacon slot is 0xa3f0...
+        const beaconSlot = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
         const raw = await ethers.provider.getStorageAt(appProxy, beaconSlot);
         beaconAddr = ethers.utils.getAddress("0x" + raw.slice(-40));
         console.log(`derived beacon ${beaconAddr} from APP_PROXY=${appProxy}`);
