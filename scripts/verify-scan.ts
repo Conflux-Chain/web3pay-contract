@@ -8,13 +8,12 @@ let port = schema === 'http' ? 80 : 443
 import * as fs from "fs";
 import {IncomingMessage} from "http";
 async function main() {
-	await Promise.all([
-		// verifyContract('Controller', '0x0cce3a75536c3ba9612bd0eef2979cb494562340'),
-		// verifyContract('APICoin', '0x1332DC018a7bA4b63B766f6aa674C12Ea09a9211'), // api impl
-		verifyContract('Airdrop', '0xc9d25A0f060e69A57fbC86144181d7520A12100E'),
-		// verifyContract('TokenRouter', '0x8948152d858d6713D0A62649DAD9B3384bdd92f3'),
-		]
-	)
+	// Verify the upgraded App implementation. Address is overridable via APP_IMPL
+	// (default points at the testnet impl 0x11ef6d33004FFCee427783dd9A73e208B87c90AA).
+	// Requires ./flatten/App.txt to exist (generate with: hardhat flatten contracts/v2/App.sol > flatten/App.txt)
+	// and TEST_SCAN_URL to be set (e.g. https://evmtestnet.confluxscan.io/api).
+	const addr = process.env.APP_IMPL || "0x11ef6d33004FFCee427783dd9A73e208B87c90AA";
+	await verifyContract('App', addr);
 }
 export async function verifyContract(contract: string, address: string) {
 	console.log(`verify for ${contract} at ${address}`)
