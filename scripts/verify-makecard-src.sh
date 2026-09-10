@@ -23,8 +23,12 @@ case "$NETWORK" in
   *)          HARDHAT_NETWORK="$NETWORK"; SCAN_URL="${TEST_SCAN_URL:-https://evmtestnet.confluxscan.org}" ;;
 esac
 
-# 升级后的 App 实现合约地址 (可用 export APP_IMPL=0x... 覆盖)
-export APP_IMPL="${APP_IMPL:-0x11ef6d33004FFCee427783dd9A73e208B87c90AA}"
+# 升级后的 App 实现合约地址；非测试网必须显式提供
+case "$NETWORK" in
+  net71|test) APP_IMPL="${APP_IMPL:-0x11ef6d33004FFCee427783dd9A73e208B87c90AA}" ;;
+  *)          : "${APP_IMPL:?Set APP_IMPL for network $NETWORK}" ;;
+esac
+export APP_IMPL
 export TEST_SCAN_URL="${TEST_SCAN_URL:-$SCAN_URL}"
 export TEST_RPC_URL="${TEST_RPC_URL:-https://evmtestnet.confluxrpc.com}"
 
