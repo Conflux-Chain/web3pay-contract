@@ -141,5 +141,9 @@ contract App is AppCore, VipCoinDeposit, VipCoinWithdraw, ICards {
         super.revokeRole(role, account);
     }
 
+    function _withdrawExchanger() internal view override returns(address) {
+        return address(appRegistry.getExchanger());
+    }
+
     receive() external payable {}
 }

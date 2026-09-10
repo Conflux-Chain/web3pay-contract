@@ -7,9 +7,7 @@ Quick start:
 
 ```shell 
 yarn install
-ts-node scripts/setupERC777.ts
 yarn compile
-yarn test-api-coin
 ```
 
 Deploy:
@@ -22,8 +20,8 @@ create .env file with these variables configured:
 run 
 ```shell
 # generate files needed when verifying contract on scan
-./scripts/flatten.sh  
-yarn test-deploy
+./scripts/flatten-v2.sh
+yarn test-deploy-v2
 ```
 
 Make sure deployer account has enough balance.

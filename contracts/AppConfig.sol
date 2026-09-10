@@ -142,13 +142,13 @@ abstract contract AppConfig is IAppConfig{
         _flushPendingConfig(pendingSeconds);
     }
     function _flushPendingConfig(uint256 pendingSeconds_) internal {
-        uint32[] memory newPendingArray;
+        uint32[] memory newPendingArray = new uint32[](pendingIdArray.length);
         uint newIndex = 0;
         if (pendingIdArray.length == 0) {
             return;
         }
-        for(uint i=pendingIdArray.length - 1; i >= 0; i--) {
-            uint32 id = pendingIdArray[i];
+        for(uint i=pendingIdArray.length; i > 0; i--) {
+            uint32 id = pendingIdArray[i - 1];
             // clean it
             pendingIdArray.pop();
             ConfigEntry storage config = resourceConfigures[id];
@@ -191,12 +191,9 @@ abstract contract AppConfig is IAppConfig{
             // keeps information
             //config.submitSeconds = 0;
             //config.pendingWeight = 0;
-            if (i==0) {
-                break;
-            }
         }
         // set still pending ids
-        for(uint i=0; i<newPendingArray.length; i++) {
+        for(uint i=0; i<newIndex; i++) {
             pendingIdArray.push(newPendingArray[i]);
         }
     }
@@ -214,10 +211,9 @@ abstract contract AppConfig is IAppConfig{
         }
         ConfigEntry[] memory slice = new ConfigEntry[](limit);
         for(uint32 i=0; i<limit;i++) {
-            uint32 id = indexArray[i];
+            uint32 id = indexArray[offset + i];
             slice[i] = resourceConfigures[id];
             slice[i].index = resources[slice[i].resourceId]; // use index as id
-            offset ++;
         }
         return (slice, total);
     }
