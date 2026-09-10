@@ -9,7 +9,7 @@ import {
 	CardTemplate,
 	CardTracker, ERC1967Proxy, ERC20,
 	IERC20,
-	MyERC1967, ReadFunctions,
+	ReadFunctions,
 	SwapExchange,
 	UpgradeableBeacon, VipCoin, VipCoinFactory
 } from "../typechain";
