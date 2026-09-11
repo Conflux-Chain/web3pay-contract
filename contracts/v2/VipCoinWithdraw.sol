@@ -87,16 +87,22 @@ abstract contract VipCoinWithdraw is AppCore {
         _withdrawForEth(balance, receiver, hook, ethMin);
     }
     function _withdrawForEth(uint balance, address receiver, IWithdrawHook hook, uint256 ethMin) internal {
+        require(address(hook) == _withdrawExchanger(), "App: invalid withdraw hook");
+
         uint remBalance = address(this).balance;
+        SafeERC20.safeApprove(appCoin, address(hook), 0);
         SafeERC20.safeApprove(appCoin, address(hook), balance);
         hook.withdrawETH(balance, ethMin, address(this));
+        SafeERC20.safeApprove(appCoin, address(hook), 0);
         uint swapEth = address(this).balance - remBalance;
         require(swapEth >= ethMin, "App: INSUFFICIENT_OUTPUT_AMOUNT");
 
-        (bool success,) = msg.sender.call{value : swapEth}(new bytes(0));
+        (bool success,) = receiver.call{value : swapEth}(new bytes(0));
         require(success, 'App: transfer ETH failed');
 
         emit Withdraw(_msgSender(), _msgSender(), receiver, balance);
     }
+
+    function _withdrawExchanger() internal view virtual returns(address);
 
 }

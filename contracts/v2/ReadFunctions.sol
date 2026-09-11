@@ -40,6 +40,7 @@ contract ReadFunctions is Initializable, IMetaBuilder {
 
     function initialize(IAppRegistry reg_) public initializer {
         registry = reg_;
+        owner = msg.sender;
     }
     function setOwner(address to) public {
         require(owner == address(0), "already set");

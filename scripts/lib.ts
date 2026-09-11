@@ -9,9 +9,9 @@ import {
 	CardTemplate,
 	CardTracker, ERC1967Proxy, ERC20,
 	IERC20,
-	ISwap, MyERC1967, ReadFunctions,
+	ReadFunctions,
 	SwapExchange,
-	TokenRouter, UpgradeableBeacon, VipCoin, VipCoinFactory
+	UpgradeableBeacon, VipCoin, VipCoinFactory
 } from "../typechain";
 import fs from "fs";
 export const tokensNet71 = {
@@ -32,28 +32,6 @@ export async function attachT<T>(name:string, to:string) : Promise<T>{
 export async function attach(name:string, to:string) {
 	const template = await ethers.getContractFactory(name);
 	return template.attach(to)
-}
-export async function depositTokens(tokens:any, myRouter:TokenRouter, path:string[], testApp: string, base20: IERC20) {
-	const swapRouter = tokens.__router //
-	const useToken = await ethers.getContractAt("IERC20", path[0]) as IERC20;
-	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
-	console.log(`approved`)
-	await myRouter.depositWithSwap(swapRouter, parseEther("1"), 0, path, testApp, getDeadline()).then(tx => tx.wait())
-	console.log(`depositWithSwap ok`)
-	//
-	await base20.approve(myRouter.address, parseEther("1")).then(waitTx)
-	await myRouter.depositBaseToken(parseEther("1"), testApp).then(waitTx)
-	console.log(`depositBaseToken. done`)
-
-	await useToken.approve(myRouter.address, parseEther("1")).then(tx => tx.wait());
-	console.log(`approved`)
-	await myRouter.swapTokensForExactBaseTokens(swapRouter, parseEther("1"),
-		parseEther("1"), path, testApp, getDeadline()).then(tx => tx.wait())
-	console.log(`swapTokensForExactBaseTokens ok`)
-
-	await myRouter.depositNativeValue(swapRouter, parseEther("0.03"), [tokens.wcfx, base20.address], testApp, getDeadline()
-		, {value: parseEther("1")}).then(tx=>tx.wait())
-	console.log(`depositNativeValue done`)
 }
 export async function approveERC20(token:string, to:string, amount:string) {
 	const template = await ethers.getContractFactory([
@@ -110,8 +88,7 @@ export async function deployV2App(asset: string, swap:string, tag='') {
 	);
 	const apiWeightTokenBeacon = await (apiWeightFactory as ApiWeightTokenFactory).beacon();
 
-	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl, beacon: vipCoinFactoryBeacon} = await deployWithBeaconProxy("VipCoinFactory", []);
-	await fixOwner(vipCoinFactory.address);
+	const {instance: vipCoinFactory, impl: vipCoinFactoryImpl, beacon: vipCoinFactoryBeacon} = await deployWithBeaconProxy("VipCoinFactory", [appOwner]);
 	await (vipCoinFactory as VipCoinFactory).createTemplate().then(waitTx)
 
 	const {impl: cardTemplateImpl, beacon: cardTemplateBeacon} = await deployBeacon("CardTemplate", []);
@@ -129,7 +106,6 @@ export async function deployV2App(asset: string, swap:string, tag='') {
 	const {instance: appRegistryInst, impl: appRegistryImpl, beacon: appRegFactoryBeacon} =
 		await deployWithBeaconProxy("AppRegistry", [appFactoryProxy!.address, exchange.address])
 	const {instance:readFunctionsProxy, beacon: readFunctionsBeacon} = await deployWithBeaconProxy("ReadFunctions", [appRegistryInst.address]);
-	await fixOwner(readFunctionsProxy.address);
 	await setMeta(readFunctionsProxy.address);
 	await vipCoinFactory.setMetaBuilder(readFunctionsProxy.address).then(waitTx)
 
@@ -164,11 +140,6 @@ export async function deployV2App(asset: string, swap:string, tag='') {
 	const finishBalance = await ethers.getSigners().then(res=>res[0]).then(s=>s.getBalance())
 	console.log(`deployed, cost ${formatEther(initialBalance.sub(finishBalance))}`)
 	return {v2app, exchange,};
-}
-async function fixOwner(proxy:string) {
-	const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
-	await fns.setOwner(await fns.signer.getAddress()).then(waitTx)
-	console.log(`set owner ok`)
 }
 async function setMeta(proxy:string) {
 	const fns = await attachT<ReadFunctions>("ReadFunctions", proxy);
